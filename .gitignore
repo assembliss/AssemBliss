@@ -1,0 +1,21 @@
+# Compiled object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Compiled dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Executables
+*.exe
+*.out
+
+# Dependency files
+*.d
+
+# Build directories
+build/
+bin/
