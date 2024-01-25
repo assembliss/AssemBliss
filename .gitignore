@@ -19,3 +19,4 @@
 # Build directories
 build/
 bin/
+temp/
