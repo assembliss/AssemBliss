@@ -1,0 +1,6 @@
+[submodule "assembliss/Qdb"]
+	path = assembliss/Qdb
+	url = git@github.com:ucgJhe/Qdb.git
+[submodule "assembliss/rootfs"]
+	path = assembliss/rootfs
+	url = git@github.com:qilingframework/rootfs.git
