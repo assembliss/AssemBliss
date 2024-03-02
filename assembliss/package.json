@@ -1,34 +1,52 @@
 {
   "name": "assembliss",
-  "displayName": "AssemBliss",
-  "description": "Environment that allows users to program in assembly armv8 language and execute and debug their code.",
+  "displayName": "assembliss",
+  "description": "Emulate and debug ARMv8 assembly in VS Code",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.54.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages"
   ],
-  "activationEvents": [],
-  "main": "./extension.js",
+  "activationEvents": ["onDebug"],
+  "main": "./out/extension.js",
   "contributes": {
-    "commands": [{
-      "command": "assembliss.helloWorld",
-      "title": "Hello World"
-    }]
+    "languages": [{
+      "id": "arm64",
+      "aliases": ["ARMv8 Assembly", "ARM64 Assembly", "AArch64 Assembly", "arm64", "armv8", "aarch64", "ARMv8-A Assembly", "64-bit ARM Assembly", "ARM Assembly (ARMv8/ARM64)"],
+      "extensions": [".s",".asm"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "arm64",
+      "scopeName": "source.s",
+      "path": "./syntaxes/arm64.tmLanguage.json"
+    }],
+    "commands": [
+      {
+        "command": "arm-debugger.helloWorld",
+        "title": "Hello World"
+      }
+    ]
   },
   "scripts": {
-    "lint": "eslint .",
-    "pretest": "npm run lint",
+    "vscode:prepublish": "yarn run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "yarn run compile && yarn run lint",
+    "lint": "eslint src --ext ts",
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "^1.86.0",
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
+    "@typescript-eslint/eslint-plugin": "^7.0.2",
+    "@typescript-eslint/parser": "^7.0.2",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3",
-    "@vscode/test-cli": "^0.0.4",
-    "@vscode/test-electron": "^2.3.8"
+    "@vscode/test-cli": "^0.0.6",
+    "@vscode/test-electron": "^2.3.9"
   }
 }
