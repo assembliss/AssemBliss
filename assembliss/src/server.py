@@ -21,4 +21,5 @@ if __name__ == "__main__":
     # binary is what you want to run in the Qiling
     # rootfs is the root file system for the Qiling
     # root file system is the directory where the Qiling will look for the files
-    test_gdb(["/home/wdharri2/Documents/NCSU/CSC492/2024SpringTeam37-Batista/temp/generate/arm-debugger/rootfs/x8664_linux/bin/hello_world"], "/home/wdharri2/Documents/NCSU/CSC492/2024SpringTeam37-Batista/temp/generate/arm-debugger/rootfs/x8664_linux")
+    test_gdb(["../rootfs/x8664_linux/bin/x8664_hello_static"], "../rootfs/x8664_linux")
+    # TODO eventually change to arm
