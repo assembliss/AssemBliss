@@ -8,7 +8,7 @@ const Qiling = require('qiling').Qiling;
 
 export class QilingEmulator extends EventEmitter {
 
-    private _emulator = null;
+    private _emulator;
     private _arch = "arm64";
     private _rootfs = "/path/to/rootfs";
     private _binaryPath = "/path/to/binary";

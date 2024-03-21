@@ -9,20 +9,39 @@
   "categories": [
     "Programming Languages"
   ],
-  "activationEvents": ["onDebug"],
+  "activationEvents": [
+    "onDebug"
+  ],
   "main": "./out/extension.js",
   "contributes": {
-    "languages": [{
-      "id": "arm64",
-      "aliases": ["ARMv8 Assembly", "ARM64 Assembly", "AArch64 Assembly", "arm64", "armv8", "aarch64", "ARMv8-A Assembly", "64-bit ARM Assembly", "ARM Assembly (ARMv8/ARM64)"],
-      "extensions": [".s",".asm"],
-      "configuration": "./language-configuration.json"
-    }],
-    "grammars": [{
-      "language": "arm64",
-      "scopeName": "source.s",
-      "path": "./syntaxes/arm64.tmLanguage.json"
-    }],
+    "languages": [
+      {
+        "id": "arm64",
+        "aliases": [
+          "ARMv8 Assembly",
+          "ARM64 Assembly",
+          "AArch64 Assembly",
+          "arm64",
+          "armv8",
+          "aarch64",
+          "ARMv8-A Assembly",
+          "64-bit ARM Assembly",
+          "ARM Assembly (ARMv8/ARM64)"
+        ],
+        "extensions": [
+          ".s",
+          ".asm"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "arm64",
+        "scopeName": "source.s",
+        "path": "./syntaxes/arm64.tmLanguage.json"
+      }
+    ],
     "commands": [
       {
         "command": "arm-debugger.helloWorld",
@@ -39,14 +58,20 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.86.0",
+    "@testdeck/mocha": "^0.3.3",
     "@types/mocha": "^10.0.6",
-    "@types/node": "18.x",
+    "@types/node": "^18.19.26",
+    "@types/vscode": "^1.86.0",
     "@typescript-eslint/eslint-plugin": "^7.0.2",
     "@typescript-eslint/parser": "^7.0.2",
-    "eslint": "^8.56.0",
-    "typescript": "^5.3.3",
     "@vscode/test-cli": "^0.0.6",
-    "@vscode/test-electron": "^2.3.9"
+    "@vscode/test-electron": "^2.3.9",
+    "eslint": "^8.56.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.2"
+  },
+  "dependencies": {
+    "events": "^3.3.0",
+    "mocha-typescript": "^1.1.17"
   }
 }
