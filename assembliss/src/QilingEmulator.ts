@@ -1,10 +1,11 @@
 /*---------------------------------------------------------
  * Refactored to use Qiling for ARMv8 emulation
+ * Runtime
  *--------------------------------------------------------*/
 'use strict';
 
 import { EventEmitter } from 'events';
-const Qiling = require('qiling').Qiling;
+const Qiling = require('qiling').Qiling; // Qiling is a Node.js wrapper for the Qiling library
 
 export class QilingEmulator extends EventEmitter {
 

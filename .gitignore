@@ -59,5 +59,10 @@ Temporary Items
 
 # End of https://www.toptal.com/developers/gitignore/api/macos
 
-# Submodulesasdjflkasdjklf
-assembliss/Qdb/
+# Submodules
+assembliss/Qdb/*
+assembliss/rootfs/*
+node_modules/*
+
+# Ignore python compiled files
+*.pyc
