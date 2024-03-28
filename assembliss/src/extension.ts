@@ -1,71 +1,34 @@
-'use strict';
+// The module 'vscode' contains the VS Code extensibility API
+// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-// Assuming QilingEmulator is a class you have defined for handling Qiling emulation
-import { QilingEmulator } from './QilingEmulator';
+import * as DebuggerExtension from './Debugger/Debugger';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
+export async function activate(context: vscode.ExtensionContext) {
+  // Use the console to output diagnostic information (console.log) and errors (console.error)
+  // This line of code will only be executed once when your extension is activated
+  console.log('Extension "Assembliss" is now active.');
 
-export function activate(context: vscode.ExtensionContext) {
-    console.log('Extension "qiling-armv8-emulator" is now active.');
+  let disposable = vscode.commands.registerCommand('assembliss.helloWorld', () => {
+		// The code you place here will be executed every time your command is executed
 
-    const config = vscode.workspace.getConfiguration('qiling');
-    let archConfig = config.get('arch');
-    let rootfsConfig = config.get('rootfs');
-    let binaryConfig = config.get('binaryPath');
+		// Display a message box to the user
+		vscode.window.showInformationMessage('Hello World!');
+	});
 
-    let arch = archConfig ? archConfig.toString() : 'arm64';
-    let rootfs = rootfsConfig ? rootfsConfig.toString() : '';
-    let binaryPath = binaryConfig ? binaryConfig.toString() : '';
+	context.subscriptions.push(disposable);
+  // The command has been defined in the package.json file
+  // Now provide the implementation of the command with registerCommand
+  // The commandId parameter must match the command field in package.json
 
-    let qilingEmulator = new QilingEmulator(arch, rootfs, binaryPath);
+    // Initialize the DebuggerExtension and register the related commands and providers.
+    await DebuggerExtension.initialize(context); // await is used to wait for the promise to resolve before continuing execution.
 
-    let outputChannel = vscode.window.createOutputChannel('Qiling ARMv8');
-
-    qilingEmulator.on('onInfoMessage', (msg: string) => {
-        vscode.window.showInformationMessage('Qiling: ' + msg);
-    });
-    qilingEmulator.on('onWarningMessage', (msg: string) => {
-        vscode.window.showWarningMessage('Qiling: ' + msg);
-    });
-    qilingEmulator.on('onErrorMessage', (msg: string) => {
-        vscode.window.showErrorMessage('Qiling: ' + msg);
-    });
-
-    qilingEmulator.on('onEmulatorMessage', (data: string) => {
-        outputChannel.append('Qiling> ');
-        let lines = data.split('\\n');
-        if (lines.length === 1) {
-            lines = data.split('\n');
-        }
-        lines.forEach(line => {
-            outputChannel.appendLine(line.trim());
-        });
-    });
-
-    const getCode = () => {
-        let textEditor = vscode.window.activeTextEditor;
-        if (!textEditor) {
-            return "";
-        }
-        let selection = textEditor.selection;
-        let text = textEditor.document.getText(selection);
-        if (textEditor.selection.isEmpty) {
-            text = textEditor.document.lineAt(textEditor.selection.start.line).text;
-        }
-        return text;
-    };
-
-    let disposable = vscode.commands.registerCommand('extension.runQiling', () => {
-        let code = getCode();
-        if (code === '') {
-            return;
-        }
-        qilingEmulator.runCode(code);
-    });
-    context.subscriptions.push(disposable);
+    console.log('Assembliss extension has finished initializing.');
 }
 
 // this method is called when your extension is deactivated
 export function deactivate() {
 }
+

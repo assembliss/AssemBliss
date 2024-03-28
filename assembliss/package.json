@@ -3,17 +3,90 @@
   "displayName": "assembliss",
   "description": "Emulate and debug ARMv8 assembly in VS Code",
   "version": "0.0.1",
+  "publisher": "NCSU",
+  "repository": "https://github.ncsu.edu/engr-csc-sdc/2024SpringTeam37-Batista.git",
   "engines": {
-    "vscode": "^1.54.0"
+    "vscode": "^1.87.0"
   },
   "categories": [
     "Programming Languages"
   ],
   "activationEvents": [
+    "onDebugResolve:qdb",
     "onDebug"
   ],
+  "FIXME": "onDebug",
   "main": "./out/extension.js",
   "contributes": {
+    "contributes": {
+      "breakpoints": [
+        {
+          "language": "arm64"
+        }
+      ],
+      "debuggers": [
+        {
+          "type": "qdb",
+          "label": "Arm Debugger",
+          "program": "FIXME: start DA",
+          "runtime": "node",
+          "windows": {
+            "program": ".FIXME: start docker container"
+          },
+          "osx": {
+            "program": "FIXME: start docker container"
+          },
+          "configurationAttributes": {
+            "launch": {
+              "required": [
+                "program"
+              ],
+              "properties": {
+                "program": {
+                  "type": "string",
+                  "description": "Absolute path to an arm file.",
+                  "default": "${workspaceFolder}/${command:AskForProgramName}"
+                },
+                "stopOnEntry": {
+                  "type": "boolean",
+                  "description": "Automatically stop after launch.",
+                  "default": true
+                },
+                "trace": {
+                  "type": "boolean",
+                  "description": "Enable logging of the Debug Adapter Protocol.",
+                  "default": true
+                }
+              }
+            }
+          },
+          "initialConfigurations": [
+            {
+              "type": "qdb",
+              "request": "launch",
+              "name": "Ask for file name",
+              "program": "${workspaceFolder}/${command:AskForProgramName}",
+              "stopOnEntry": true
+            }
+          ],
+          "configurationSnippets": [
+            {
+              "label": "Assembliss Debugger: Launch",
+              "description": "A new configuration for launching the assembliss debugger.",
+              "body": {
+                "type": "qdb",
+                "request": "launch",
+                "name": "${2:Launch Program}",
+                "program": "^\"\\${workspaceFolder}/${1:Program}\""
+              }
+            }
+          ],
+          "variables": {
+            "AskForProgramName": "assembliss.getProgramName"
+          }
+        }
+      ]
+    },
     "languages": [
       {
         "id": "arm64",
@@ -29,49 +102,59 @@
           "ARM Assembly (ARMv8/ARM64)"
         ],
         "extensions": [
+          ".asm",
           ".s",
-          ".asm"
+          ".arm"
         ],
         "configuration": "./language-configuration.json"
       }
     ],
-    "grammars": [
-      {
-        "language": "arm64",
-        "scopeName": "source.s",
-        "path": "./syntaxes/arm64.tmLanguage.json"
-      }
-    ],
     "commands": [
       {
-        "command": "arm-debugger.helloWorld",
-        "title": "Hello World"
+        "command": "assembliss.helloWorld",
+        "title": "Assembliss: Hello World"
+      },
+      {
+        "command": "assembliss.getProgramName",
+        "title": "Assembliss: Get Program Name"
+      },
+      {
+        "command": "assembliss.runEditorContents",
+        "title": "Assembliss: Run Editor Contents"
+      },
+      {
+        "command": "assembliss.debugEditorContents",
+        "title": "Assembliss: Debug Editor Contents"
+      },
+      {
+        "command": "assemblis.toggleFormatting",
+        "title": "Assembliss: Toggle Formatting"
       }
     ]
   },
   "scripts": {
-    "vscode:prepublish": "yarn run compile",
+    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "pretest": "yarn run compile && yarn run lint",
+    "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "vscode-test"
+    "test": "vscode-assembliss"
   },
   "devDependencies": {
-    "@testdeck/mocha": "^0.3.3",
     "@types/mocha": "^10.0.6",
-    "@types/node": "^18.19.26",
-    "@types/vscode": "^1.86.0",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.87.0",
     "@typescript-eslint/eslint-plugin": "^7.0.2",
     "@typescript-eslint/parser": "^7.0.2",
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.9",
+    "await-notify": "^1.0.1",
     "eslint": "^8.56.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.4.2"
+    "tslint": "^5.16.0",
+    "typescript": "^5.3.3"
   },
   "dependencies": {
-    "events": "^3.3.0",
-    "mocha-typescript": "^1.1.17"
+    "@vscode/debugadapter": "^1.65.0",
+    "@vscode/debugprotocol": "^1.65.0"
   }
 }
