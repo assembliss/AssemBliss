@@ -1,32 +1,11 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.workspaceFileAccessor = exports.initialize = void 0;
-const vscode = __importStar(require("vscode"));
-const utils = __importStar(require("./utils"));
+const vscode = require("vscode");
+const utils = require("./utils");
+const Qdb_1 = require("./Qdb");
 function initialize(context) {
+    console.log('Initializing Assembliss extension.');
     //throw new Error('Function not implemented.');
     // register a configuration provider for 'qdb' debug type
     const provider = new ConfigurationProvider();
@@ -132,8 +111,16 @@ class ConfigurationProvider {
         return config;
     }
 }
+/**
+ * File accessor for workspace files.
+ */
 exports.workspaceFileAccessor = {
     isWindows: typeof process !== 'undefined' && process.platform === 'win32',
+    /**
+     * Reads the contents of a file asynchronously.
+     * @param path - The path of the file to read.
+     * @returns A promise that resolves to the file contents as a Uint8Array.
+     */
     async readFile(path) {
         let uri;
         try {
@@ -144,6 +131,11 @@ exports.workspaceFileAccessor = {
         }
         return await vscode.workspace.fs.readFile(uri);
     },
+    /**
+     * Writes the contents to a file asynchronously.
+     * @param path - The path of the file to write.
+     * @param contents - The contents to write as a Uint8Array.
+     */
     async writeFile(path, contents) {
         await vscode.workspace.fs.writeFile(utils.pathToUri(path), contents);
     }
@@ -153,8 +145,8 @@ exports.workspaceFileAccessor = {
  */
 class DebugAdapterFactory {
     createDebugAdapterDescriptor(_session) {
-        // return new vscode.DebugAdapterInlineImplementation(new AssemblissDebugSession(workspaceFileAccessor));
-        return null; // TODO: implement DebugSession
+        return new vscode.DebugAdapterInlineImplementation(new Qdb_1.AssemblissDebugSession(exports.workspaceFileAccessor));
+        // return null; // TODO: implement DebugSession
     }
 }
 //# sourceMappingURL=Debugger.js.map
