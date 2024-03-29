@@ -1,3 +1,4 @@
+import { spawn } from 'child_process';
 import { EventEmitter } from 'events';
 
 export interface FileAccessor {
@@ -84,4 +85,33 @@ export class QilingDebugger extends EventEmitter {
 	// TODO: figure out how to run qdb.py or use qiling hooks (python?) from this class
 	// FIXME: I may make this temporarily simply run qdb.py and then later implement the hooks in python
 	// NOTE: This class originated from MockRuntime in mockRuntime.ts
+	
+	constructor(private fileAccessor: FileAccessor) {
+		super();
+	}
+
+	/**
+	 * Start executing the given program.
+	 */
+	//TODO: pass arguments to qdb.py (these are the launch.json configurations)
+	public async start(program: string, stopOnEntry: boolean, debug: boolean): Promise<void> {
+
+		const qdbProcess = spawn('python3', ['../../qdb.py']); // load the program
+		qdbProcess.stdout.on('data', (data) => {
+			console.log(`stdout: ${data}`); // Pray this simply shows the output of qdb.py
+		});
+	// 	if (debug) {
+	// 		await this.verifyBreakpoints(this._sourceFile);
+
+	// 		if (stopOnEntry) {
+	// 			this.findNextStatement(false, 'stopOnEntry');
+	// 		} else {
+	// 			// we just start to run until we hit a breakpoint, an exception, or the end of the program
+	// 			this.continue(false);
+	// 		}
+	// 	} else {
+	// 		this.continue(false);
+	// 	}
+	}
+
 }

@@ -66,3 +66,6 @@ node_modules/*
 
 # Ignore python compiled files
 *.pyc
+
+#ignore transpiled files
+assembliss/out/*

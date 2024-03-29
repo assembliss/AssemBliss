@@ -6,8 +6,8 @@ import {
 	Thread, StackFrame, Scope, Source, Handles, Breakpoint, MemoryEvent
 } from '@vscode/debugadapter';
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { QilingDebugger } from './Runtime';
-import { Subject } from 'await-notify'; //FIXME: npm install --save await-notify
+import { FileAccessor, QilingDebugger } from './Runtime';
+import { Subject } from 'await-notify';
 
 /**
  * This interface describes the qdb specific launch attributes
@@ -68,7 +68,6 @@ export class AssemblissDebugSession extends LoggingDebugSession {
 	 * Represents the configuration done subject.
 	 * This subject is used to notify the launchRequest that configuration has finished.
 	 */
-    //TODO: npm install --save await-notify
 	private _configurationDone = new Subject();
 
     /**
@@ -91,14 +90,14 @@ export class AssemblissDebugSession extends LoggingDebugSession {
 // 	 * Creates a new debug adapter that is used for one debug session.
 // 	 * We configure the default implementation of a debug adapter here.
 // 	 */
-// 	public constructor(fileAccessor: FileAccessor) {
-// 		super("mock-debug.txt");
+    public constructor(fileAccessor: FileAccessor) {
+		super("debug-log.txt");
 
 // 		// this debugger uses zero-based lines and columns
 // 		this.setDebuggerLinesStartAt1(false);
 // 		this.setDebuggerColumnsStartAt1(false);
 
-// 		this._runtime = new MockRuntime(fileAccessor);
+		this._runtime = new QilingDebugger(fileAccessor);
 
 // 		// setup event handlers
 // 		this._runtime.on('stopOnEntry', () => {
@@ -150,7 +149,7 @@ export class AssemblissDebugSession extends LoggingDebugSession {
 // 		this._runtime.on('end', () => {
 // 			this.sendEvent(new TerminatedEvent());
 // 		});
-// 	}
+	}
 
 // 	/**
 // 	 * The 'initialize' request is the first request called by the frontend
@@ -263,7 +262,14 @@ export class AssemblissDebugSession extends LoggingDebugSession {
 // 		return this.launchRequest(response, args);
 // 	}
 
-// 	protected async launchRequest(response: DebugProtocol.LaunchResponse, args: ILaunchRequestArguments) {
+    /**
+	 * Handles the 'launch' request from the debugger.
+	 * Launches the program in the runtime and sends the response back to the debugger.
+	 * If there is a compile error, it simulates the error and sends an error response.
+	 * @param response - The response object to send back to the debugger.
+	 * @param args - The launch request arguments.
+	 */
+	protected async launchRequest(response: DebugProtocol.LaunchResponse, args: ILaunchRequestArguments) {
 
 // 		// make sure to 'Stop' the buffered logging if 'trace' is not set
 // 		logger.setup(args.trace ? Logger.LogLevel.Verbose : Logger.LogLevel.Stop, false);
@@ -272,7 +278,7 @@ export class AssemblissDebugSession extends LoggingDebugSession {
 // 		await this._configurationDone.wait(1000);
 
 // 		// start the program in the runtime
-// 		await this._runtime.start(args.program, !!args.stopOnEntry, !args.noDebug);
+		await this._runtime.start(args.program, !!args.stopOnEntry, !args.noDebug);
 
 // 		if (args.compileError) {
 // 			// simulate a compile/build error in "launch" request:
@@ -286,7 +292,7 @@ export class AssemblissDebugSession extends LoggingDebugSession {
 // 		} else {
 // 			this.sendResponse(response);
 // 		}
-// 	}
+	}
 
 // 	protected setFunctionBreakPointsRequest(response: DebugProtocol.SetFunctionBreakpointsResponse, args: DebugProtocol.SetFunctionBreakpointsArguments, request?: DebugProtocol.Request): void {
 // 		this.sendResponse(response);

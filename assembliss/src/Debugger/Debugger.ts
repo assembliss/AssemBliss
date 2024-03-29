@@ -2,8 +2,10 @@ import * as vscode from 'vscode';
 import { CancellationToken, DebugConfiguration, ProviderResult, WorkspaceFolder } from 'vscode';
 import { FileAccessor } from './Runtime';
 import * as utils from './utils';
+import { AssemblissDebugSession } from './Qdb';
 
 export function initialize(context: vscode.ExtensionContext) {
+	console.log('Initializing Assembliss extension.')
     //throw new Error('Function not implemented.');
 
 	// register a configuration provider for 'qdb' debug type
@@ -164,7 +166,7 @@ export const workspaceFileAccessor: FileAccessor = {
 class DebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
 
 	createDebugAdapterDescriptor(_session: vscode.DebugSession): ProviderResult<vscode.DebugAdapterDescriptor> {
-		// return new vscode.DebugAdapterInlineImplementation(new AssemblissDebugSession(workspaceFileAccessor));
-		return null; // TODO: implement DebugSession
+		return new vscode.DebugAdapterInlineImplementation(new AssemblissDebugSession(workspaceFileAccessor));
+		// return null; // TODO: implement DebugSession
 	}
 }
