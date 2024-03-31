@@ -15,168 +15,6 @@
     "onDebugResolve:qdb",
     "onDebug"
   ],
-  "FIXME": "onDebug",
-  "main": "./out/extension.js",
-  "contributes": {
-    "contributes": {
-      "breakpoints": [
-        {
-          "language": "arm64"
-        }
-      ],
-      "debuggers": [
-        {
-          "type": "qdb",
-          "languages": [
-            "arm64"
-          ],
-          "label": "QDB Debugger",
-          "program": "./out/Qdb.js",
-          "runtime": "node",
-          "configurationAttributes": {
-            "launch": {
-              "required": [
-                "program"
-              ],
-              "properties": {
-                "program": {
-                  "type": "string",
-                  "description": "Absolute path to an arm file.",
-                  "default": "${workspaceFolder}/${command:AskForProgramName}"
-                },
-                "stopOnEntry": {
-                  "type": "boolean",
-                  "description": "Automatically stop after launch.",
-                  "default": true
-                },
-                "trace": {
-                  "type": "boolean",
-                  "description": "Enable logging of the Debug Adapter Protocol.",
-                  "default": true
-                }
-              }
-            },
-            "attach": {
-              "required": [
-                "program"
-              ],
-              "properties": {
-                "program": {
-                  "type": "string",
-                  "description": "Absolute path to a text file.",
-                  "default": "${workspaceFolder}/${command:AskForProgramName}"
-                },
-                "stopOnEntry": {
-                  "type": "boolean",
-                  "description": "Automatically stop after attach.",
-                  "default": true
-                },
-                "trace": {
-                  "type": "boolean",
-                  "description": "Enable logging of the Debug Adapter Protocol.",
-                  "default": true
-                },
-                "compileError": {
-                  "type": "string",
-                  "description": "Simulates a compile error in 'attach' request.",
-                  "enum": [
-                    "default",
-                    "show",
-                    "hide"
-                  ],
-                  "enumDescriptions": [
-                    "default: show fake compile error to user",
-                    "show fake compile error to user",
-                    "do not show fake compile error to user"
-                  ]
-                }
-              }
-            }
-          },
-          "initialConfigurations": [
-            {
-              "type": "mock",
-              "request": "launch",
-              "name": "Ask for file name",
-              "program": "${workspaceFolder}/${command:AskForProgramName}",
-              "stopOnEntry": true
-            }
-          ],
-          "configurationSnippets": [
-            {
-              "label": "Mock Debug: Launch",
-              "description": "A new configuration for 'debugging' a user selected markdown file.",
-              "body": {
-                "type": "mock",
-                "request": "launch",
-                "name": "Ask for file name",
-                "program": "^\"\\${workspaceFolder}/\\${command:AskForProgramName}\"",
-                "stopOnEntry": true
-              }
-            },
-            {
-              "label": "Mock Debug 2: Launch",
-              "description": "A new configuration for 'debugging' a user selected markdown file.",
-              "body": {
-                "type": "mock",
-                "request": "launch",
-                "name": "Ask for file name",
-                "program": "^\"\\${workspaceFolder}/\\${command:AskForProgramName}\"",
-                "stopOnEntry": true
-              }
-            }
-          ],
-          "variables": {
-            "AskForProgramName": "extension.mock-debug.getProgramName"
-          }
-        }
-      ]
-    },
-    "languages": [
-      {
-        "id": "arm64",
-        "aliases": [
-          "ARMv8 Assembly",
-          "ARM64 Assembly",
-          "AArch64 Assembly",
-          "arm64",
-          "armv8",
-          "aarch64",
-          "ARMv8-A Assembly",
-          "64-bit ARM Assembly",
-          "ARM Assembly (ARMv8/ARM64)"
-        ],
-        "extensions": [
-          ".asm",
-          ".s",
-          ".arm"
-        ],
-        "configuration": "./language-configuration.json"
-      }
-    ],
-    "commands": [
-      {
-        "command": "assembliss.helloWorld",
-        "title": "Assembliss: Hello World"
-      },
-      {
-        "command": "assembliss.getProgramName",
-        "title": "Assembliss: Get Program Name"
-      },
-      {
-        "command": "assembliss.runEditorContents",
-        "title": "Assembliss: Run Editor Contents"
-      },
-      {
-        "command": "assembliss.debugEditorContents",
-        "title": "Assembliss: Debug Editor Contents"
-      },
-      {
-        "command": "assemblis.toggleFormatting",
-        "title": "Assembliss: Toggle Formatting"
-      }
-    ]
-  },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
@@ -198,8 +36,128 @@
     "tslint": "^5.16.0",
     "typescript": "^5.3.3"
   },
-  "dependencies": {
-    "@vscode/debugadapter": "^1.65.0",
-    "@vscode/debugprotocol": "^1.65.0"
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "assembliss.helloWorld",
+        "title": "Assembliss: Hello World"
+      },
+      {
+        "command": "assembliss.getProgramName",
+        "title": "Assembliss: Get Program Name"
+      },
+      {
+        "command": "assembliss.runEditorContents",
+        "title": "Assembliss: Run Editor Contents"
+      },
+      {
+        "command": "assembliss.debugEditorContents",
+        "title": "Assembliss: Debug Editor Contents"
+      },
+      {
+        "command": "assembliss.toggleFormatting",
+        "title": "Assembliss: Toggle Formatting"
+      }
+    ],
+    "breakpoints": [
+      {
+        "language": "arm64"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "qdb",
+        "program": "out/Debugger/Qdb.js",
+        "runtime": "node",
+        "label": "qdb",
+        "languages": [
+          "arm64",
+          "arm",
+          "aarch64",
+          "armv8",
+          "armv8-a",
+          "arm64-a",
+          "asm",
+          "assembly",
+          "arm assembly",
+          "armv8 assembly",
+          "arm64 assembly",
+          "aarch64 assembly",
+          "ARMv8 Assembly",
+          "qdb"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "target"
+            ],
+            "properties": {
+              "target": {
+                "type": "string",
+                "description": "Path of executable",
+                "default": "${workspaceFolder}/${command:AskForProgramName}"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Automatically stop after launch.",
+                "default": true
+              },
+              "trace": {
+                "type": "boolean",
+                "description": "Enable logging of the Debug Adapter Protocol.",
+                "default": true
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "mock",
+            "request": "launch",
+            "name": "Ask for file name",
+            "program": "${workspaceFolder}/${command:AskForProgramName}",
+            "stopOnEntry": true
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Assembliss: Launch",
+            "description": "A new configuration for debugging a user selected assembly file.",
+            "body": {
+              "type": "qdb",
+              "request": "launch",
+              "name": "Assembliss: Ask for program name",
+              "target": "^\"\\${workspaceFolder}/\\${command:AskForProgramName}\"",
+              "stopOnEntry": true
+            }
+          }
+        ],
+        "variables": {
+          "AskForProgramName": "assembliss.getProgramName"
+        }
+      }
+    ],
+    "languages": [{
+      "id": "arm64",
+      "aliases": [
+        "ARMv8 Assembly",
+        "ARM64 Assembly",
+        "AArch64 Assembly",
+        "arm64",
+        "armv8",
+        "aarch64",
+        "ARMv8-A Assembly",
+        "64-bit ARM Assembly",
+        "ARM Assembly (ARMv8/ARM64)",
+        "qdb"
+      ],
+      "extensions": [
+        ".asm",
+        ".s",
+        ".arm"
+      ],
+      "configuration": "./language-configuration.json"
+    }]
   }
 }

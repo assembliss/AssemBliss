@@ -22,9 +22,9 @@ export function initialize(context: vscode.ExtensionContext) {
 			if (targetResource) { // if there is a targetResource
 				vscode.debug.startDebugging(undefined, { // start debugging
 					type: 'qdb',
-					name: 'Run File',
+					name: 'Assembliss: Run File',
 					request: 'launch',
-					program: targetResource.fsPath
+					target: targetResource.fsPath
 				},
 					{ noDebug: true } // noDebug is set to true so that the debugger does not stop at the first line of the program
 				);
@@ -38,9 +38,9 @@ export function initialize(context: vscode.ExtensionContext) {
 			if (targetResource) {
 				vscode.debug.startDebugging(undefined, {
 					type: 'qdb',
-					name: 'Debug File',
+					name: 'Assembliss: Debug File',
 					request: 'launch',
-					program: targetResource.fsPath,
+					target: targetResource.fsPath,
 					stopOnEntry: true
 				});
 			}
@@ -68,10 +68,11 @@ export function initialize(context: vscode.ExtensionContext) {
 		provideDebugConfigurations(folder: WorkspaceFolder | undefined): ProviderResult<DebugConfiguration[]> { 
 			return [
 				{
-					name: "Assembliss: Dynamic Launch",
+					name: "Assembliss: Dynamic Test Launch",
+					// name: "Assembliss: Dynamic Launch",
 					request: "launch",
 					type: "qdb",
-					program: "${file}"
+					target: "${file}"
 				}
 			];
 		}
@@ -111,9 +112,9 @@ class ConfigurationProvider implements vscode.DebugConfigurationProvider {
 			const editor = vscode.window.activeTextEditor;
 			if (editor && editor.document.languageId === 'arm64') {
 				config.type = 'qdb';
-				config.name = 'Launch';
+				config.name = 'Assembliss: Launch TEST';
 				config.request = 'launch';
-				config.program = '${file}';
+				config.target = '${file}';
 				config.stopOnEntry = true;
 			}
 		}
@@ -166,7 +167,8 @@ export const workspaceFileAccessor: FileAccessor = {
 class DebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
 
 	createDebugAdapterDescriptor(_session: vscode.DebugSession): ProviderResult<vscode.DebugAdapterDescriptor> {
-		return new vscode.DebugAdapterInlineImplementation(new AssemblissDebugSession(workspaceFileAccessor));
+		let assembliss = new AssemblissDebugSession(workspaceFileAccessor);
+		return new vscode.DebugAdapterInlineImplementation(assembliss);
 		// return null; // TODO: implement DebugSession
 	}
 }

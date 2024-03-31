@@ -96,7 +96,8 @@ export class QilingDebugger extends EventEmitter {
 	//TODO: pass arguments to qdb.py (these are the launch.json configurations)
 	public async start(program: string, stopOnEntry: boolean, debug: boolean): Promise<void> {
 
-		const qdbProcess = spawn('python3', ['../../qdb.py']); // load the program
+		let path = this.normalizePathAndCasing('../../qdb.py');
+		const qdbProcess = spawn('python3', [path]); // load the program
 		qdbProcess.stdout.on('data', (data) => {
 			console.log(`stdout: ${data}`); // Pray this simply shows the output of qdb.py
 		});
@@ -114,4 +115,16 @@ export class QilingDebugger extends EventEmitter {
 	// 	}
 	}
 
+	/**
+	 * This makes sure that the path is in the right format for the current OS
+	 * @param path path to normalize
+	 * @returns normalized path
+	 */
+	private normalizePathAndCasing(path: string) {
+		if (this.fileAccessor.isWindows) {
+			return path.replace(/\//g, '\\').toLowerCase();
+		} else {
+			return path.replace(/\\/g, '/');
+		}
+	}
 }
