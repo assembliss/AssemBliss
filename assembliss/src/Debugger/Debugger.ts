@@ -55,10 +55,12 @@ export function initialize(context: vscode.ExtensionContext) {
 	console.log('Added commands for running and debugging editor contents.')
 
     // register a command that asks for a program name
-    vscode.commands.registerCommand('assembliss.getProgramName', config => {
-      return vscode.window.showInputBox({
-        placeHolder: 'Please enter the name of an arm assembly file in the workspace folder'
-      });
+    vscode.commands.registerCommand('assembliss.getProgramName', async config => { //NOTE: possibly remove async and await
+		const program =  await vscode.window.showInputBox({
+			placeHolder: 'Please enter the name of an arm assembly file in the workspace folder'
+		});
+		console.log('Program selected: ' + program);
+    	return program;
     });
     console.log('Added command for getting program name.')
 
@@ -66,15 +68,16 @@ export function initialize(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('qdb', {
 		// TODO: figure out how to get this to appear in Assembliss instead of undefined
 		provideDebugConfigurations(folder: WorkspaceFolder | undefined): ProviderResult<DebugConfiguration[]> { 
-			return [
+			const config = [
 				{
-					name: "Assembliss: Dynamic Test Launch",
-					// name: "Assembliss: Dynamic Launch",
+					name: "Assembliss: Dynamic Launch",
 					request: "launch",
 					type: "qdb",
 					target: "${file}"
 				}
 			];
+			console.log('Dynamic configuration provided. Target: ' + config[0].target);
+			return config;
 		}
 	}, vscode.DebugConfigurationProviderTriggerKind.Dynamic));
 	console.log('Added dynamic configuration provider for qdb debug type.')
@@ -112,7 +115,7 @@ class ConfigurationProvider implements vscode.DebugConfigurationProvider {
 			const editor = vscode.window.activeTextEditor;
 			if (editor && editor.document.languageId === 'arm64') {
 				config.type = 'qdb';
-				config.name = 'Assembliss: Launch TEST';
+				config.name = 'Assembliss: Launch'; 
 				config.request = 'launch';
 				config.target = '${file}';
 				config.stopOnEntry = true;

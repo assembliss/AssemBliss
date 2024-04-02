@@ -13,7 +13,8 @@
   ],
   "activationEvents": [
     "onDebugResolve:qdb",
-    "onDebug"
+    "onDebug",
+    "onDebugResolve:arm"
   ],
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -70,7 +71,7 @@
         "type": "qdb",
         "program": "out/Debugger/Qdb.js",
         "runtime": "node",
-        "label": "qdb",
+        "label": "Assembliss",
         "languages": [
           "arm64",
           "arm",
