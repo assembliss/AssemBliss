@@ -62,7 +62,6 @@ Temporary Items
 # Submodules
 assembliss/Qdb/*
 assembliss/rootfs/*
-node_modules/*
 
 # Ignore python compiled files
 *.pyc
