@@ -2,6 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as DebuggerExtension from './Debugger/Debugger';
+import { activateAssemblerCommands } from './AssemblerLinker/assemblerCommands';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -9,7 +10,8 @@ export async function activate(context: vscode.ExtensionContext) {
   // Use the console to output diagnostic information (console.log) and errors (console.error)
   // This line of code will only be executed once when your extension is activated
   console.log('Extension "Assembliss" is now active.');
-
+  activateAssemblerCommands(context);
+  
   let disposable = vscode.commands.registerCommand('assembliss.helloWorld', () => {
 		// The code you place here will be executed every time your command is executed
 

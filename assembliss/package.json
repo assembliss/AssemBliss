@@ -39,6 +39,23 @@
   },
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+        "title": "Assembliss",
+        "properties": {
+            "assembliss.assembler": {
+                "title": "Assembler",
+                "type": "string",
+                "default": "aarch64-linux-gnu-as",
+                "description": "Assembler used by assembliss commands. For example, 'aarch64-linux-gnu-as' or full path if not on system path."
+            },
+            "assembliss.linker": {
+                "title": "Linker",
+                "type": "string",
+                "default": "aarch64-linux-gnu-ld",
+                "description": "Linker used by assembliss commands. For example, 'aarch64-linux-gnu-ld' or full path if not on system path."
+            }
+        }
+    },
     "commands": [
       {
         "command": "assembliss.helloWorld",
@@ -59,6 +76,14 @@
       {
         "command": "assembliss.toggleFormatting",
         "title": "Assembliss: Toggle Formatting"
+      },
+      {
+        "command": "assembliss.AS",
+        "title": "Assembliss: AS"
+      },
+      {
+        "command": "assembliss.LD",
+        "title": "Assembliss: LD"
       }
     ],
     "breakpoints": [
