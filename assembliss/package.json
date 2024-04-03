@@ -58,10 +58,6 @@
     },
     "commands": [
       {
-        "command": "assembliss.helloWorld",
-        "title": "Assembliss: Hello World"
-      },
-      {
         "command": "assembliss.getProgramName",
         "title": "Assembliss: Get Program Name"
       },
@@ -139,10 +135,10 @@
         },
         "initialConfigurations": [
           {
-            "type": "mock",
+            "type": "qdb",
             "request": "launch",
-            "name": "Ask for file name",
-            "program": "${workspaceFolder}/${command:AskForProgramName}",
+            "name": "Assembliss: Ask for file name (Initial Config)",
+            "target": "${workspaceFolder}/${command:AskForProgramName}",
             "stopOnEntry": true
           }
         ],

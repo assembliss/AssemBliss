@@ -45,6 +45,9 @@ export function initialize(context: vscode.ExtensionContext) {
 				});
 			}
 		}),
+		// The command has been defined in the package.json file
+  		// Now provide the implementation of the command with registerCommand
+  		// The commandId parameter must match the command field in package.json	
 		vscode.commands.registerCommand('assemblis.toggleFormatting', (variable) => { // toggles formatting meaning it will format the code
 			const ds = vscode.debug.activeDebugSession;
 			if (ds) {

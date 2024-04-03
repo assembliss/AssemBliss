@@ -8,26 +8,15 @@ import { activateAssemblerCommands } from './AssemblerLinker/assemblerCommands';
 // your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
   // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
+  // This line of code will only be executed once when the extension is activated
   console.log('Extension "Assembliss" is now active.');
+
+  // Register the assembler commands
   activateAssemblerCommands(context);
-  
-  let disposable = vscode.commands.registerCommand('assembliss.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
 
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World!');
-	});
-
-	context.subscriptions.push(disposable);
-  // The command has been defined in the package.json file
-  // Now provide the implementation of the command with registerCommand
-  // The commandId parameter must match the command field in package.json
-
-    // Initialize the DebuggerExtension and register the related commands and providers.
-    await DebuggerExtension.initialize(context); // await is used to wait for the promise to resolve before continuing execution.
-
-    console.log('Assembliss extension has finished initializing.');
+  // Initialize the DebuggerExtension and register the related commands and providers.
+  await DebuggerExtension.initialize(context); // await is used to wait for the promise to resolve before continuing execution.
+  console.log('Assembliss extension has finished initializing.');
 }
 
 // this method is called when your extension is deactivated

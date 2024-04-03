@@ -99,7 +99,7 @@ export class QilingDebugger extends EventEmitter {
 		let path = this.normalizePathAndCasing('../../qdb.py');
 		const qdbProcess = spawn('python3', [path]); // load the program
 		qdbProcess.stdout.on('data', (data) => {
-			console.log(`stdout: ${data}`); // Pray this simply shows the output of qdb.py
+			console.log(`stdout: ${data}`); 
 		});
 	// 	if (debug) {
 	// 		await this.verifyBreakpoints(this._sourceFile);
