@@ -1,11 +1,8 @@
-import {
-	
-	LoggingDebugSession
-	
-	} from '@vscode/debugadapter';
+import * as DebugAdapter from '@vscode/debugadapter';
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { FileAccessor, QilingDebugger } from './Runtime';
+import { FileAccessor, IRuntimeBreakpoint, QilingDebugger } from './Runtime';
 import { Subject } from 'await-notify';
+import { basename } from 'path-browserify';
 
 /**
  * This interface describes the qdb specific launch attributes
@@ -49,7 +46,7 @@ interface ILaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
 }
 
 // TODO: implement properly
-export class AssemblissDebugSession extends LoggingDebugSession {
+export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 
 	// we don't support multiple threads, so we can use a hardcoded ID for the default thread
 	private static threadID = 1;
@@ -97,63 +94,67 @@ export class AssemblissDebugSession extends LoggingDebugSession {
 
 		this._runtime = new QilingDebugger(fileAccessor);
 
-// 		// setup event handlers
-// 		this._runtime.on('stopOnEntry', () => {
-// 			this.sendEvent(new StoppedEvent('entry', MockDebugSession.threadID));
-// 		});
-// 		this._runtime.on('stopOnStep', () => {
-// 			this.sendEvent(new StoppedEvent('step', MockDebugSession.threadID));
-// 		});
-// 		this._runtime.on('stopOnBreakpoint', () => {
-// 			this.sendEvent(new StoppedEvent('breakpoint', MockDebugSession.threadID));
-// 		});
-// 		this._runtime.on('stopOnDataBreakpoint', () => {
-// 			this.sendEvent(new StoppedEvent('data breakpoint', MockDebugSession.threadID));
-// 		});
-// 		this._runtime.on('stopOnInstructionBreakpoint', () => {
-// 			this.sendEvent(new StoppedEvent('instruction breakpoint', MockDebugSession.threadID));
-// 		});
+		// setup event handlers
+		this._runtime.on('stopOnEntry', () => {
+			this.sendEvent(new DebugAdapter.StoppedEvent('entry', AssemblissDebugSession.threadID));
+		});
+		this._runtime.on('stopOnStep', () => {
+			this.sendEvent(new DebugAdapter.StoppedEvent('step', AssemblissDebugSession.threadID));
+		});
+		this._runtime.on('stopOnBreakpoint', () => {
+			this.sendEvent(new DebugAdapter.StoppedEvent('breakpoint', AssemblissDebugSession.threadID));
+		});
+		this._runtime.on('stopOnDataBreakpoint', () => {
+			this.sendEvent(new DebugAdapter.StoppedEvent('data breakpoint', AssemblissDebugSession.threadID));
+		});
+		this._runtime.on('stopOnInstructionBreakpoint', () => {
+			this.sendEvent(new DebugAdapter.StoppedEvent('instruction breakpoint', AssemblissDebugSession.threadID));
+		});
 // 		this._runtime.on('stopOnException', (exception) => {
 // 			if (exception) {
 // 				this.sendEvent(new StoppedEvent(`exception(${exception})`, MockDebugSession.threadID));
 // 			} else {
 // 				this.sendEvent(new StoppedEvent('exception', MockDebugSession.threadID));
 // 			}
-// 		});
-// 		this._runtime.on('breakpointValidated', (bp: IRuntimeBreakpoint) => {
-// 			this.sendEvent(new BreakpointEvent('changed', { verified: bp.verified, id: bp.id } as DebugProtocol.Breakpoint));
-// 		});
-// 		this._runtime.on('output', (type, text, filePath, line, column) => {
+// 		}); FIXME: Implement exception handling
+		this._runtime.on('breakpointValidated', (bp: IRuntimeBreakpoint) => {
+			this.sendEvent(new DebugAdapter.BreakpointEvent('changed', { verified: bp.verified, id: bp.id } as DebugProtocol.Breakpoint));
+		});
+		this._runtime.on('output', (type, text, filePath, line, column) => {
 
-// 			let category: string;
-// 			switch(type) {
-// 				case 'prio': category = 'important'; break;
-// 				case 'out': category = 'stdout'; break;
-// 				case 'err': category = 'stderr'; break;
-// 				default: category = 'console'; break;
-// 			}
-// 			const e: DebugProtocol.OutputEvent = new OutputEvent(`${text}\n`, category);
+			let category: string;
+			switch(type) {
+				case 'prio': category = 'important'; break;
+				case 'out': category = 'stdout'; break;
+				case 'err': category = 'stderr'; break;
+				default: category = 'console'; break;
+			}
+			const e: DebugProtocol.OutputEvent = new DebugAdapter.OutputEvent(`${text}\n`, category);
 
-// 			if (text === 'start' || text === 'startCollapsed' || text === 'end') {
-// 				e.body.group = text;
-// 				e.body.output = `group-${text}\n`;
-// 			}
+			if (text === 'start' || text === 'startCollapsed' || text === 'end') {
+				e.body.group = text;
+				e.body.output = `group-${text}\n`;
+			}
 
-// 			e.body.source = this.createSource(filePath);
-// 			e.body.line = this.convertDebuggerLineToClient(line);
-// 			e.body.column = this.convertDebuggerColumnToClient(column);
-// 			this.sendEvent(e);
-// 		});
-// 		this._runtime.on('end', () => {
-// 			this.sendEvent(new TerminatedEvent());
-// 		});
+			e.body.source = this.createSource(filePath);
+			e.body.line = this.convertDebuggerLineToClient(line);
+			e.body.column = this.convertDebuggerColumnToClient(column);
+			this.sendEvent(e);
+		});
+		this._runtime.on('end', () => {
+			this.sendEvent(new DebugAdapter.TerminatedEvent());
+		});
 	}
 
-// 	/**
-// 	 * The 'initialize' request is the first request called by the frontend
-// 	 * to interrogate the features the debug adapter provides.
-// 	 */
-// 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
+
+	/**
+	 * Initializes the debug adapter by setting up its capabilities and sending an 'initializeRequest' to the frontend.
+	 * This method is called when the debug session starts.
+	 *
+	 * @param response - The response object to send back to the frontend.
+	 * @param args - The arguments passed in the 'initializeRequest'.
+	 */
+	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
 
 // 		if (args.supportsProgressReporting) {
 // 			this._reportProgress = true;
@@ -239,7 +240,7 @@ export class AssemblissDebugSession extends LoggingDebugSession {
 // 		// we request them early by sending an 'initializeRequest' to the frontend.
 // 		// The frontend will end the configuration sequence by calling 'configurationDone' request.
 // 		this.sendEvent(new InitializedEvent());
-// 	}
+	}
 
 // 	/**
 // 	 * Called at the end of the configuration sequence.
@@ -927,7 +928,15 @@ export class AssemblissDebugSession extends LoggingDebugSession {
 // 		return this._valuesInHex ? '0x' + x.toString(16) : x.toString(10);
 // 	}
 
-// 	private createSource(filePath: string): Source {
-// 		return new Source(basename(filePath), this.convertDebuggerPathToClient(filePath), undefined, undefined, 'mock-adapter-data');
-// 	}
+	/**
+	 * Creates a DebugAdapter.Source object based on the provided file path.
+	 *  
+	 * @param filePath - The path of the source file. e.g. /path/to/file.c
+	 * @returns A DebugAdapter.Source object representing the source file. e.g. { name: 'file.c', path: '/path/to/file.c' }
+	 */
+	private createSource(filePath: string): DebugAdapter.Source {
+		// this.convertDebuggerPathTOClient taeks the following parameters: path, sourceReference, source
+		// qdb-adapter-data is a custom data type that is used to identify the source as a custom source
+		return new DebugAdapter.Source(basename(filePath), this.convertDebuggerPathToClient(filePath), undefined, undefined, 'qdb-adapter-data');
+	}
 }

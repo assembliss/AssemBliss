@@ -27,9 +27,12 @@
   "devDependencies": {
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
+    "@types/path-browserify": "^1.0.2",
     "@types/vscode": "^1.87.0",
     "@typescript-eslint/eslint-plugin": "^7.0.2",
     "@typescript-eslint/parser": "^7.0.2",
+    "@vscode/debugadapter": "^1.65.0",
+    "@vscode/debugprotocol": "^1.65.0",
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.9",
     "await-notify": "^1.0.1",
@@ -40,21 +43,21 @@
   "main": "./out/extension.js",
   "contributes": {
     "configuration": {
-        "title": "Assembliss",
-        "properties": {
-            "assembliss.assembler": {
-                "title": "Assembler",
-                "type": "string",
-                "default": "aarch64-linux-gnu-as",
-                "description": "Assembler used by assembliss commands. For example, 'aarch64-linux-gnu-as' or full path if not on system path."
-            },
-            "assembliss.linker": {
-                "title": "Linker",
-                "type": "string",
-                "default": "aarch64-linux-gnu-ld",
-                "description": "Linker used by assembliss commands. For example, 'aarch64-linux-gnu-ld' or full path if not on system path."
-            }
+      "title": "Assembliss",
+      "properties": {
+        "assembliss.assembler": {
+          "title": "Assembler",
+          "type": "string",
+          "default": "aarch64-linux-gnu-as",
+          "description": "Assembler used by assembliss commands. For example, 'aarch64-linux-gnu-as' or full path if not on system path."
+        },
+        "assembliss.linker": {
+          "title": "Linker",
+          "type": "string",
+          "default": "aarch64-linux-gnu-ld",
+          "description": "Linker used by assembliss commands. For example, 'aarch64-linux-gnu-ld' or full path if not on system path."
         }
+      }
     },
     "commands": [
       {
@@ -160,26 +163,31 @@
         }
       }
     ],
-    "languages": [{
-      "id": "arm64",
-      "aliases": [
-        "ARMv8 Assembly",
-        "ARM64 Assembly",
-        "AArch64 Assembly",
-        "arm64",
-        "armv8",
-        "aarch64",
-        "ARMv8-A Assembly",
-        "64-bit ARM Assembly",
-        "ARM Assembly (ARMv8/ARM64)",
-        "qdb"
-      ],
-      "extensions": [
-        ".asm",
-        ".s",
-        ".arm"
-      ],
-      "configuration": "./language-configuration.json"
-    }]
+    "languages": [
+      {
+        "id": "arm64",
+        "aliases": [
+          "ARMv8 Assembly",
+          "ARM64 Assembly",
+          "AArch64 Assembly",
+          "arm64",
+          "armv8",
+          "aarch64",
+          "ARMv8-A Assembly",
+          "64-bit ARM Assembly",
+          "ARM Assembly (ARMv8/ARM64)",
+          "qdb"
+        ],
+        "extensions": [
+          ".asm",
+          ".s",
+          ".arm"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ]
+  },
+  "dependencies": {
+    "@types/path-browserify": "^1.0.2"
   }
 }

@@ -118,7 +118,7 @@ class ConfigurationProvider implements vscode.DebugConfigurationProvider {
 			const editor = vscode.window.activeTextEditor;
 			if (editor && editor.document.languageId === 'arm64') {
 				config.type = 'qdb';
-				config.name = 'Assembliss: Launch'; 
+				config.name = 'Assembliss: Launch Resolve'; 
 				config.request = 'launch';
 				config.target = '${file}';
 				config.stopOnEntry = true;
@@ -126,7 +126,7 @@ class ConfigurationProvider implements vscode.DebugConfigurationProvider {
 		}
 
 		if (!config.program) {
-			return vscode.window.showInformationMessage("Cannot find a program to debug").then(_ => {
+			return vscode.window.showInformationMessage("Cannot find a program to debug IDIOT").then(_ => { //FIXME: delete this
 				return undefined;	// abort launch
 			});
 		}
