@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { CancellationToken, DebugConfiguration, ProviderResult, WorkspaceFolder } from 'vscode';
-import { FileAccessor } from './Runtime';
+import { FileAccessor } from '../backend/Runtime';
 import * as utils from './utils';
 import { AssemblissDebugSession } from './Qdb';
 

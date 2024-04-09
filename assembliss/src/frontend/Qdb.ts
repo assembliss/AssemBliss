@@ -1,6 +1,6 @@
 import * as DebugAdapter from '@vscode/debugadapter';
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { FileAccessor, IRuntimeBreakpoint, IRuntimeVariableType, QilingDebugger, RuntimeVariable } from './Runtime';
+import { FileAccessor, IRuntimeBreakpoint, IRuntimeVariableType, QilingDebugger, RuntimeVariable } from '../backend/Runtime';
 import { Subject } from 'await-notify';
 import { basename } from 'path-browserify';
 
