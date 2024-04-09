@@ -90,9 +90,9 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
     public constructor(fileAccessor: FileAccessor) {
 		super("debug-log.txt");
 
-// 		// this debugger uses zero-based lines and columns
-// 		this.setDebuggerLinesStartAt1(false);
-// 		this.setDebuggerColumnsStartAt1(false);
+		// this debugger uses one-based lines and columns
+		this.setDebuggerLinesStartAt1(true);
+		this.setDebuggerColumnsStartAt1(true);
 
 		this._runtime = new QilingDebugger(fileAccessor);
 

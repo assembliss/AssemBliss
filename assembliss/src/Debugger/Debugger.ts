@@ -125,8 +125,8 @@ class ConfigurationProvider implements vscode.DebugConfigurationProvider {
 			}
 		}
 
-		if (!config.program) {
-			return vscode.window.showInformationMessage("Cannot find a program to debug IDIOT").then(_ => { //FIXME: delete this
+		if (!config.target) {
+			return vscode.window.showInformationMessage("Cannot find a program to debug").then(_ => {
 				return undefined;	// abort launch
 			});
 		}

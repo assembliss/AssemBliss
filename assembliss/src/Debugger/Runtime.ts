@@ -121,11 +121,11 @@ export class RuntimeVariable {
 /** A Word in this context is a sequence of characters that form a token in the source code.
  * Index is the position of the word in the line.
  */
-interface Word {
-	name: string;
-	line: number;
-	index: number;
-}
+// interface Word {
+// 	name: string;
+// 	line: number;
+// 	index: number;
+// }
 
 
 /**
@@ -186,6 +186,13 @@ export class QilingDebugger extends EventEmitter {
 		qdbProcess.stdout.on('data', (data) => {
 			console.log(`stdout: ${data}`); 
 		});
+		qdbProcess.stderr.on('data', (data) => {
+			console.error(`stderr: ${data}`);
+		});
+		qdbProcess.on('close', (code) => {
+			console.log(`child process exited with code ${code}`);
+		});
+		
 	// 	if (debug) {
 	// 		await this.verifyBreakpoints(this._sourceFile);
 
