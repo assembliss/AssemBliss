@@ -58,3 +58,13 @@ Temporary Items
 *.icloud
 
 # End of https://www.toptal.com/developers/gitignore/api/macos
+
+# Submodules
+assembliss/Qdb/*
+assembliss/rootfs/*
+
+# Ignore python compiled files
+*.pyc
+
+#ignore transpiled files
+assembliss/out/
