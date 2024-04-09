@@ -181,7 +181,10 @@ export class QilingDebugger extends EventEmitter {
 	//TODO: pass arguments to qdb.py (these are the launch.json configurations)
 	public async start(program: string, stopOnEntry: boolean, debug: boolean): Promise<void> {
 
-		let path = this.normalizePathAndCasing('../../qdb.py');
+		//Get the path to qdb.py
+		console.log("Current working directory" + process.cwd());
+
+		let path = this.normalizePathAndCasing('./qdb.py');
 		const qdbProcess = spawn('python3', [path]); // load the program
 		qdbProcess.stdout.on('data', (data) => {
 			console.log(`stdout: ${data}`); 
@@ -192,6 +195,7 @@ export class QilingDebugger extends EventEmitter {
 		qdbProcess.on('close', (code) => {
 			console.log(`child process exited with code ${code}`);
 		});
+		qdbProcess.stdin.write('q\n');
 		
 	// 	if (debug) {
 	// 		await this.verifyBreakpoints(this._sourceFile);
