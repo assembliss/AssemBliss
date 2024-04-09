@@ -923,6 +923,12 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 // 		this.sendResponse(response);
 // 	}
 
+	/**
+	 * Sets the instruction breakpoints based on the provided arguments.
+	 * 
+	 * @param response - The response object to send back to the debugger.
+	 * @param args - The arguments containing the breakpoints to set.
+	 */
 	protected setInstructionBreakpointsRequest(response: DebugProtocol.SetInstructionBreakpointsResponse, args: DebugProtocol.SetInstructionBreakpointsArguments) {
 
 		// clear all instruction breakpoints
@@ -957,6 +963,12 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 
 // 	//---- helpers
 
+	/**
+	 * Converts a string value to its corresponding runtime variable type.
+	 * 
+	 * @param value - The string value to be converted.
+	 * @returns The converted runtime variable type.
+	 */
 	private convertToRuntime(value: string): IRuntimeVariableType {
 
 		// value= value.trim();
