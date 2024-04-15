@@ -796,20 +796,19 @@ export class QilingDebugger extends EventEmitter {
 				if (!bp.verified && bp.line < this.sourceLines.length) {
 					const srcLine = this.getLine(bp.line);
 
-					// if a line is empty or starts with '+' we don't allow to set a breakpoint but move the breakpoint down
-					if (srcLine.length === 0 || srcLine.indexOf('+') === 0) {
+					// NOTE: since qiling does not perserve line numbers, we have to  manually match the line number to the source line
+					// This makes it difficult to  handle breakpoints on empty lines or lines with comments or other non-executable code
+					// In the future, we may have a list of all 354 executable instructions a line must start with to be executable and set breakpoints on those lines
+					// if a line is empty or starts with '/*' we don't allow to set a breakpoint but move the breakpoint down
+					if (srcLine.length === 0 || srcLine.trim().indexOf('/*') === 0 || srcLine.trim().indexOf('//')=== 0){
 						bp.line++;
 					}
-					// if a line starts with '-' we don't allow to set a breakpoint but move the breakpoint up
-					if (srcLine.indexOf('-') === 0) {
-						bp.line--;
-					}
-					// don't set 'verified' to true if the line contains the word 'lazy'
-					// in this case the breakpoint will be verified 'lazy' after hitting it once.
-					if (srcLine.indexOf('lazy') < 0) {
-						bp.verified = true;
-						this.sendEvent('breakpointValidated', bp);
-					}
+					// TODO: handle loops and jumps
+					// if (srcLine.indexOf('jmp') === 0) {
+					// 	bp.line--;
+					// }
+					bp.verified = true;
+					this.sendEvent('breakpointValidated', bp);
 				}
 			});
 		}
