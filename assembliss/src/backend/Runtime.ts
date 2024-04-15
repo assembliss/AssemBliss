@@ -183,7 +183,11 @@ export class QilingDebugger extends EventEmitter {
 
 		//Get the path to qdb.py
 		console.log("Current working directory: " + process.cwd());
-
+		var re = /\/out\/backend/gi;  
+		console.log("Current working directory: " + __dirname);
+		process.chdir(__dirname.replace(re, ""));
+		console.log("Current working directory now: " + process.cwd());
+	  
 		let path = this.normalizePathAndCasing('./qdb.py');
 		const qdbProcess = spawn('python3', [path]); // load the program
 		qdbProcess.stdout.on('data', (data) => {
