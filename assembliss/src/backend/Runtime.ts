@@ -118,15 +118,19 @@ export class RuntimeVariable {
 	// }
 }
 
-/** A Word in this context is a sequence of characters that form a token in the source code.
- * Index is the position of the word in the line.
- */
+// /** A Word in this context is a sequence of characters that form a token in the source code.
+//  * Index is the position of the word in the line.
+//  */
 // interface Word {
 // 	name: string;
 // 	line: number;
 // 	index: number;
 // }
 
+interface Line {
+	line: number;
+	text: string;
+}
 
 /**
  * Delays the execution for the specified number of milliseconds.
@@ -162,12 +166,33 @@ export class QilingDebugger extends EventEmitter {
 	 */
 	private variables = new Map<string, RuntimeVariable>();
 
+	// the contents (= lines) of the one and only file
+	private sourceLines: string[] = [];
+	private instructions: Line[] = [];
+
 	// the initial (and one and only) file we are 'debugging'
 	private _sourceFile: string = '';
 	public get sourceFile() {
 		return this._sourceFile;
 	}
 	
+	// This is the next line that will be 'executed'
+	private _currentLine = 0;
+	private get currentLine() {
+		return this._currentLine;
+	}
+
+	private set currentLine(x) {
+		this._currentLine = x;
+		this.instruction = x;
+	}
+
+	// This is the next instruction that will be 'executed'
+	public instruction= 0;
+
+	// maps from sourceFile to array of IRuntimeBreakpoint
+	private breakPoints = new Map<string, IRuntimeBreakpoint[]>();
+
 	// all instruction breakpoint addresses
 	private instructionBreakpoints = new Set<number>();
 
@@ -181,6 +206,7 @@ export class QilingDebugger extends EventEmitter {
 	//TODO: pass arguments to qdb.py (these are the launch.json configurations)
 	public async start(program: string, stopOnEntry: boolean, debug: boolean): Promise<void> {
 
+		await this.loadSource(this.normalizePathAndCasing(program)); // load the program
 		//Get the path to qdb.py
 		console.log("Current working directory" + process.cwd());
 
@@ -197,18 +223,18 @@ export class QilingDebugger extends EventEmitter {
 		});
 		qdbProcess.stdin.write('q\n');
 		
-	// 	if (debug) {
-	// 		await this.verifyBreakpoints(this._sourceFile);
+		if (debug) {
+			await this.verifyBreakpoints(this._sourceFile);
 
-	// 		if (stopOnEntry) {
-	// 			this.findNextStatement(false, 'stopOnEntry');
-	// 		} else {
-	// 			// we just start to run until we hit a breakpoint, an exception, or the end of the program
-	// 			this.continue(false);
-	// 		}
-	// 	} else {
-	// 		this.continue(false);
-	// 	}
+			if (stopOnEntry) {
+				this.findNextStatement(false, 'stopOnEntry');
+			} else {
+				// we just start to run until we hit a breakpoint, an exception, or the end of the program
+				this.continue(false);
+			}
+		} else {
+			this.continue(false);
+		}
 	}
 
 	/**
@@ -232,7 +258,7 @@ export class QilingDebugger extends EventEmitter {
 	/**
 	 * Executes the next step in the program execution.
 	 * 
-	 * @param instruction - Indicates whether to step by instruction or by line.
+	 * @param instruction - Indicates whether to step by instruction or by line. This is irrelevant for assembly code because each line is an instruction.
 	 * @param reverse - Indicates whether to step in reverse or forward direction. (Reverse execution is not supported)
 	 */
 	public step(instruction: boolean, reverse: boolean) {
@@ -251,6 +277,29 @@ export class QilingDebugger extends EventEmitter {
 		// 		}
 		// 	}
 		// }
+		const net = require('net');
+
+		const client = new net.Socket();
+		const port = 9999;
+		const host = 'localhost';
+
+		client.connect(port, host, function() {
+			console.log('Connected');
+			client.write('START;\nStep\nDATA END;');
+		});
+
+		let dataResponse = '';
+
+		client.on('data', function(data) {
+			dataResponse += data;
+			console.log('Server response: ' + data);
+		});
+
+		// client.on('close', function() {
+		// 	console.log('Connection closed');
+		// });
+		this.sendEvent('stopOnStep'); // this sends the event to the frontend
+		
 	}
 
 	// private updateCurrentLine(reverse: boolean): boolean {
@@ -371,13 +420,18 @@ export class QilingDebugger extends EventEmitter {
 		return { count: 0, frames: [] }; // TODO: implement this
 	}
 
-	/*
+	
+	/**
+	 * Retrieves the breakpoints for a given path and line number.
+	 * 
 	 * Determine possible column breakpoint positions for the given line.
 	 * Here we return the start location of words with more than 8 characters.
+	 * @param path - The path of the file.
+	 * @param line - The line number.
+	 * @returns An array of breakpoint indices.
 	 */
 	public getBreakpoints(path: string, line: number): number[] {
-		// return this.getWords(line, this.getLine(line)).filter(w => w.name.length > 8).map(w => w.index);
-		return []; // TODO: implement thisstack
+	    return [0];
 	}
 
 	// /*
@@ -422,7 +476,7 @@ export class QilingDebugger extends EventEmitter {
 	 * @param path - The path for which breakpoints should be cleared.
 	 */
 	public clearBreakpoints(path: string): void {
-		// this.breakPoints.delete(this.normalizePathAndCasing(path));
+		this.breakPoints.delete(this.normalizePathAndCasing(path));
 	}
 
 	// public setDataBreakpoint(address: string, accessType: 'read' | 'write' | 'readWrite'): boolean {
@@ -522,55 +576,64 @@ export class QilingDebugger extends EventEmitter {
 
 	// // private methods
 
-	// private getLine(line?: number): string {
-	// 	return this.sourceLines[line === undefined ? this.currentLine : line].trim();
-	// }
+	/**
+	 * Retrieves the content of a specific line from the source code.
+	 * If no line number is provided, it returns the content of the current line.
+	 *
+	 * @param line - The line number to retrieve the content from (optional).
+	 * @returns The content of the specified line.
+	 */
+	private getLine(line?: number): string {
+		return this.sourceLines[line === undefined ? this.currentLine : line].trim();
+	}
 
+	// /**
+	//  * Retrieves an array of words from a given line of text.
+	//  * 
+	//  * @param l - The line number.
+	//  * @param line - The line of text to extract words from.
+	//  * @returns An array of Word objects containing the name, line number, and index of each word.
+	//  */
 	// private getWords(l: number, line: string): Word[] {
 	// 	// break line into words
-	// 	const WORD_REGEXP = /[a-z]+/ig;
-	// 	const words: Word[] = [];
-	// 	let match: RegExpExecArray | null;
-	// 	while (match = WORD_REGEXP.exec(line)) {
-	// 		words.push({ name: match[0], line: l, index: match.index });
+	// 	const WORD_REGEXP = /[a-z]+/ig; // This is a simple regex that matches any sequence of lowercase letters.
+	// 	const words: Word[] = []; // This array will store the words found in the line.
+	// 	let match: RegExpExecArray | null; // This variable will store the result of the regex match.
+	// 	while (match = WORD_REGEXP.exec(line)) { // This loop will continue until there are no more matches.
+	// 		words.push({ name: match[0], line: l, index: match.index }); // This line adds the word to the words array.
 	// 	}
 	// 	return words;
 	// }
 
-	// private async loadSource(file: string): Promise<void> {
-	// 	if (this._sourceFile !== file) {
-	// 		this._sourceFile = this.normalizePathAndCasing(file);
-	// 		this.initializeContents(await this.fileAccessor.readFile(file));
-	// 	}
-	// }
+	/**
+	 * Loads the source file and initializes its contents.
+	 * 
+	 * @param file - The path of the source file to load.
+	 * @returns A promise that resolves when the source file is loaded and its contents are initialized.
+	 */
+	private async loadSource(file: string): Promise<void> {
+		if (this._sourceFile !== file) {
+			this._sourceFile = this.normalizePathAndCasing(file);
+			this.initializeContents(await this.fileAccessor.readFile(file));
+		}
+	}
 
-	// /**
-	//  * Initializes the contents of the mock runtime.
-	//  * How it works: The source file is read and split into lines.
-	//  * Each line is split into words and each word is stored as an instruction.
-	//  * The instructions are stored in the 'instructions' array.
-	//  * The 'starts' array contains the index of the first instruction of each line.
-	//  * The 'ends' array contains the index of the last instruction of each line.
-	//  * @param memory - The memory to initialize the contents from.
-	//  */
-	// private initializeContents(memory: Uint8Array) {
-	// 	this.sourceLines = new TextDecoder().decode(memory).split(/\r?\n/);
+	/**
+	 * Initializes the contents of the runtime.
+	 * How it works: The source file is read and split into lines.
+	 * Each line is stored as an instruction.
+	 * The instructions are stored in the 'instructions' array.
+	 * @param memory - The memory to initialize the contents from.
+	 */
+	private initializeContents(memory: Uint8Array) {
+		this.sourceLines = new TextDecoder().decode(memory).split(/\r?\n/);
 
-	// 	this.instructions = [];
+		this.instructions = [];
 
-	// 	this.starts = [];
-	// 	this.instructions = [];
-	// 	this.ends = [];
-
-	// 	for (let l = 0; l < this.sourceLines.length; l++) {
-	// 		this.starts.push(this.instructions.length);
-	// 		const words = this.getWords(l, this.sourceLines[l]);
-	// 		for (let word of words) {
-	// 			this.instructions.push(word);
-	// 		}
-	// 		this.ends.push(this.instructions.length);
-	// 	}
-	// }
+		for(let l = 0; l < this.sourceLines.length; l++) {
+			this.instructions.push({ line: l, text: this.sourceLines[l] });
+		}
+	}
 
 	// /**
 	//  * return true on stop
@@ -718,39 +781,50 @@ export class QilingDebugger extends EventEmitter {
 	// 	return false;
 	// }
 
-	// private async verifyBreakpoints(path: string): Promise<void> {
+	/**
+	 * Verifies the breakpoints for a given path.
+	 * 
+	 * @param path - The path of the source file.
+	 * @returns A promise that resolves when the breakpoints are verified.
+	 */
+	private async verifyBreakpoints(path: string): Promise<void> {
 
-	// 	const bps = this.breakPoints.get(path);
-	// 	if (bps) {
-	// 		await this.loadSource(path);
-	// 		bps.forEach(bp => {
-	// 			if (!bp.verified && bp.line < this.sourceLines.length) {
-	// 				const srcLine = this.getLine(bp.line);
+		const bps = this.breakPoints.get(path);
+		if (bps) {
+			await this.loadSource(path);
+			bps.forEach(bp => {
+				if (!bp.verified && bp.line < this.sourceLines.length) {
+					const srcLine = this.getLine(bp.line);
 
-	// 				// if a line is empty or starts with '+' we don't allow to set a breakpoint but move the breakpoint down
-	// 				if (srcLine.length === 0 || srcLine.indexOf('+') === 0) {
-	// 					bp.line++;
-	// 				}
-	// 				// if a line starts with '-' we don't allow to set a breakpoint but move the breakpoint up
-	// 				if (srcLine.indexOf('-') === 0) {
-	// 					bp.line--;
-	// 				}
-	// 				// don't set 'verified' to true if the line contains the word 'lazy'
-	// 				// in this case the breakpoint will be verified 'lazy' after hitting it once.
-	// 				if (srcLine.indexOf('lazy') < 0) {
-	// 					bp.verified = true;
-	// 					this.sendEvent('breakpointValidated', bp);
-	// 				}
-	// 			}
-	// 		});
-	// 	}
-	// }
-
-	// private sendEvent(event: string, ... args: any[]): void {
-	// 	setTimeout(() => {
-	// 		this.emit(event, ...args);
-	// 	}, 0);
-	// }
+					// if a line is empty or starts with '+' we don't allow to set a breakpoint but move the breakpoint down
+					if (srcLine.length === 0 || srcLine.indexOf('+') === 0) {
+						bp.line++;
+					}
+					// if a line starts with '-' we don't allow to set a breakpoint but move the breakpoint up
+					if (srcLine.indexOf('-') === 0) {
+						bp.line--;
+					}
+					// don't set 'verified' to true if the line contains the word 'lazy'
+					// in this case the breakpoint will be verified 'lazy' after hitting it once.
+					if (srcLine.indexOf('lazy') < 0) {
+						bp.verified = true;
+						this.sendEvent('breakpointValidated', bp);
+					}
+				}
+			});
+		}
+	}
+	
+	/**
+	 * Sends an event with the specified name and arguments asynchronously.
+	 * @param event - The name of the event to send.
+	 * @param args - The arguments to pass along with the event.
+	 */
+	private sendEvent(event: string, ... args: any[]): void {
+		setTimeout(() => {
+			this.emit(event, ...args);
+		}, 0);
+	}
 
 	/**
 	 * This makes sure that the path is in the right format for the current OS
@@ -761,7 +835,7 @@ export class QilingDebugger extends EventEmitter {
 		if (this.fileAccessor.isWindows) {
 			return path.replace(/\//g, '\\').toLowerCase();
 		} else {
-			return path.replace(/\\/g, '/');
+			return path.replace(/\\/g, '/'); // Replace backslashes with forward slashes
 		}
 	}
 }

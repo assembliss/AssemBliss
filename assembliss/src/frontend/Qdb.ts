@@ -34,7 +34,7 @@ import { basename } from 'path-browserify';
 //   }
 interface ILaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
 	/** An absolute path to the "program" to debug. */
-	program: string;
+	target: string;
 	/** Automatically stop target after launch. If not specified, target does not stop. */
 	stopOnEntry?: boolean;
 	/** enable logging the Debug Adapter Protocol */
@@ -289,15 +289,17 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 	protected async launchRequest(response: DebugProtocol.LaunchResponse, args: ILaunchRequestArguments) {
 
 // 		// make sure to 'Stop' the buffered logging if 'trace' is not set
-// 		logger.setup(args.trace ? Logger.LogLevel.Verbose : Logger.LogLevel.Stop, false);
+		// logger.setup(args.trace ? Logger.LogLevel.Verbose : Logger.LogLevel.Stop, false);
 
 // 		// wait 1 second until configuration has finished (and configurationDoneRequest has been called)
-// 		await this._configurationDone.wait(1000);
+		await this._configurationDone.wait(1000);
 
 // 		// start the program in the runtime
-		await this._runtime.start(args.program, !!args.stopOnEntry, !args.noDebug);
+		await this._runtime.start(args.target, !!args.stopOnEntry, !args.noDebug);
 
-		// implement this when launch configurations that assemble and link are implemented
+		// TODO: implement this when launch configurations that assemble and link are implemented
+		//_runtime.start() will make args.compileError true if there is no binary file to run
+		// if args.compileError is true, attempt to assemble and link the program
 // 		if (args.compileError) {
 // 			// simulate a compile/build error in "launch" request:
 // 			// the error should not result in a modal dialog since 'showUser' is set to false.
@@ -1074,8 +1076,8 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 	/**
 	 * Creates a DebugAdapter.Source object based on the provided file path.
 	 *  
-	 * @param filePath - The path of the source file. e.g. /path/to/file.c
-	 * @returns A DebugAdapter.Source object representing the source file. e.g. { name: 'file.c', path: '/path/to/file.c' }
+	 * @param filePath - The path of the source file. e.g. /path/to/file.s
+	 * @returns A DebugAdapter.Source object representing the source file. e.g. { name: 'file.s', path: '/path/to/file.s' }
 	 */
 	private createSource(filePath: string): DebugAdapter.Source {
 		// this.convertDebuggerPathTOClient taeks the following parameters: path, sourceReference, source
