@@ -10,6 +10,9 @@ export async function activate(context: vscode.ExtensionContext) {
   // Use the console to output diagnostic information (console.log) and errors (console.error)
   // This line of code will only be executed once when the extension is activated
   console.log('Extension "Assembliss" is now active.');
+  var re = /\/out/gi;  
+  process.chdir(__dirname.replace(re, ""));
+	console.log("Current working directory now: " + process.cwd());
 
   // Register the assembler commands
   assemblerCommands.activateAssemblerCommands(context);

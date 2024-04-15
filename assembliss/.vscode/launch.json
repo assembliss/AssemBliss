@@ -15,6 +15,7 @@
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"
 			],
+			"cwd": "${workspaceFolder}",
 			"preLaunchTask": "${defaultBuildTask}"
 		}
 	]
