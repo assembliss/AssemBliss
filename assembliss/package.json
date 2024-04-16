@@ -13,7 +13,6 @@
   ],
   "activationEvents": [
     "onDebugResolve:qdb",
-<<<<<<< Updated upstream
     "onDebug",
     "onDebugResolve:arm"
   ],
@@ -164,82 +163,6 @@
         }
       }
     ],
-=======
-    "onDebug"
-  ],
-  "FIXME": "onDebug",
-  "main": "./out/extension.js",
-  "contributes": {
-    "contributes": {
-      "breakpoints": [
-        {
-          "language": "arm64"
-        }
-      ],
-      "debuggers": [
-        {
-          "type": "qdb",
-          "label": "Arm Debugger",
-          "program": "FIXME: start DA",
-          "runtime": "node",
-          "windows": {
-            "program": ".FIXME: start docker container"
-          },
-          "osx": {
-            "program": "FIXME: start docker container"
-          },
-          "configurationAttributes": {
-            "launch": {
-              "required": [
-                "program"
-              ],
-              "properties": {
-                "program": {
-                  "type": "string",
-                  "description": "Absolute path to an arm file.",
-                  "default": "${workspaceFolder}/${command:AskForProgramName}"
-                },
-                "stopOnEntry": {
-                  "type": "boolean",
-                  "description": "Automatically stop after launch.",
-                  "default": true
-                },
-                "trace": {
-                  "type": "boolean",
-                  "description": "Enable logging of the Debug Adapter Protocol.",
-                  "default": true
-                }
-              }
-            }
-          },
-          "initialConfigurations": [
-            {
-              "type": "qdb",
-              "request": "launch",
-              "name": "Ask for file name",
-              "program": "${workspaceFolder}/${command:AskForProgramName}",
-              "stopOnEntry": true
-            }
-          ],
-          "configurationSnippets": [
-            {
-              "label": "Assembliss Debugger: Launch",
-              "description": "A new configuration for launching the assembliss debugger.",
-              "body": {
-                "type": "qdb",
-                "request": "launch",
-                "name": "${2:Launch Program}",
-                "program": "^\"\\${workspaceFolder}/${1:Program}\""
-              }
-            }
-          ],
-          "variables": {
-            "AskForProgramName": "assembliss.getProgramName"
-          }
-        }
-      ]
-    },
->>>>>>> Stashed changes
     "languages": [
       {
         "id": "arm64",
@@ -262,57 +185,6 @@
         ],
         "configuration": "./language-configuration.json"
       }
-<<<<<<< Updated upstream
     ]
-=======
-    ],
-    "commands": [
-      {
-        "command": "assembliss.helloWorld",
-        "title": "Assembliss: Hello World"
-      },
-      {
-        "command": "assembliss.getProgramName",
-        "title": "Assembliss: Get Program Name"
-      },
-      {
-        "command": "assembliss.runEditorContents",
-        "title": "Assembliss: Run Editor Contents"
-      },
-      {
-        "command": "assembliss.debugEditorContents",
-        "title": "Assembliss: Debug Editor Contents"
-      },
-      {
-        "command": "assemblis.toggleFormatting",
-        "title": "Assembliss: Toggle Formatting"
-      }
-    ]
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
-    "test": "vscode-assembliss"
-  },
-  "devDependencies": {
-    "@types/mocha": "^10.0.6",
-    "@types/node": "18.x",
-    "@types/vscode": "^1.87.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.2",
-    "@typescript-eslint/parser": "^7.0.2",
-    "@vscode/test-cli": "^0.0.6",
-    "@vscode/test-electron": "^2.3.9",
-    "await-notify": "^1.0.1",
-    "eslint": "^8.56.0",
-    "tslint": "^5.16.0",
-    "typescript": "^5.3.3"
-  },
-  "dependencies": {
-    "@vscode/debugadapter": "^1.65.0",
-    "@vscode/debugprotocol": "^1.65.0"
->>>>>>> Stashed changes
   }
 }
