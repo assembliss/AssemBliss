@@ -8,11 +8,8 @@ from capstone import Cs
 import random
 import subprocess
 
-#Port info
-MIN_PORT = 49152
-MAX_PORT = 65535
 #root fs file path
-ROOTFS_LOC = r"rootfs/arm64_linux"
+ROOTFS_LOC = r"../../../rootfs/arm64_linux"
 #ARM instructions are 4 bytes long
 ARM_INSTRUCT_SIZE = 4
 #files to store program state
@@ -37,9 +34,11 @@ def simple_diassembler(ql: Qiling, address: int, size: int, md: Cs) -> None:
         regs = {}
         for k in m:
             regs[k] = ql.arch.regs.read(k)
+        #write instruction info to file for access by server
         with open(INSN_INFO_FILE_NAME, 'w') as f:
             print(f"{insn.address:#x}, {insn.mnemonic:s} {insn.op_str}",
                    file=f)
+        #write register state to file for later access
         with open(REGS_INFO_FILE_NAME, 'w') as f:
             json.dump(regs, f)
 
@@ -68,13 +67,13 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         
         with open(INSN_INFO_FILE_NAME, 'r') as insnf:
             with open(REGS_INFO_FILE_NAME, 'r') as regsf:
-                
+                #if interupt has been detected send interupt number else send na
                 state={}
                 if interupt is not None:
                     state['interrupt'] = f'{interupt}'
                 else:
                     state['interrupt'] = f'na'
-                
+                #get instruction information from file and read information to get line number and info about instruction
                 try:
                     insn_info = f'{insnf.readline()[:-1]}'
                     
@@ -88,6 +87,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
                 except:
                     state['insn'] = f'could not read insn info'
                 
+                #Load registers from file into new json
                 try:
                     state['regs'] = json.load(regsf)
                 except:
@@ -108,13 +108,13 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         
         # Check if request is to get the value
         if 'get_MemMap' in query_params:
+            #return memory map string from Qiling
             m = ql.mem.get_formatted_mapinfo()
-            #print(str(m))
             returnMap = {}
             returnMap['memMap'] = m
             self.respond(200, json.dumps(returnMap))
         
-        #if get run is called, start emulation of loaded file
+        #if get run is called, start emulation of loaded file and return program state for first instruction
         elif 'get_run' in query_params:
             interupt = None
             try:
@@ -128,10 +128,11 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             except:
                 self.respond(400, "ql could not run")
 
-        #if get cont is called, continue emulation from new address
+        #if get cont is called, continue emulation from new address and return program state for first instruction
         elif 'get_cont' in query_params:
             interupt = None
             try:
+                #read pc register to get next instruction address
                 address = ql.arch.regs.read("pc")
                 
                 ql.run(begin=address, count=1)
@@ -179,7 +180,6 @@ def run(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler, port=80
     try:
         server_address = ('', port)
         httpd = server_class(server_address, handler_class)
-        input('start')
         print(f"{port}")
         httpd.serve_forever()
     except KeyboardInterrupt:
@@ -191,5 +191,4 @@ if __name__ == "__main__":
     if len(arguments) == 1:
         programPath = arguments[0]
         ql = Qiling(programPath.split(), ROOTFS_LOC)
-    randomPort = random.randint(MIN_PORT, MAX_PORT)
-    run(port=randomPort)
+    run(port=31415)
