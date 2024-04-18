@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import { EventEmitter } from 'events';
+import * as net from 'net';
 
 export interface FileAccessor {
 	isWindows: boolean;
@@ -48,28 +49,34 @@ interface IRuntimeStack {
 // Potentially replace variables with registers.
 // export type IRuntimeVariableType = number | boolean | string | RuntimeVariable[];
 // The following is a potential implementation of RuntimeVariable.
+// General Purpose Registers
+export type GeneralPurposeRegister = 
+    | 'x0' | 'x1' | 'x2' | 'x3' | 'x4' | 'x5' | 'x6' | 'x7'
+    | 'x8' | 'x9' | 'x10' | 'x11' | 'x12' | 'x13' | 'x14' | 'x15'
+    | 'x16' | 'x17' | 'x18' | 'x19' | 'x20' | 'x21' | 'x22' | 'x23'
+    | 'x24' | 'x25' | 'x26' | 'x27' | 'x28' | 'x29' | 'x30';
+
+// Special Registers
+export type SpecialRegister = 'sp' | 'pc' | 'lr';
+
+// System Registers
+export type SystemRegister = 'cpacr_el1' | 'tpidr_el0' | 'pstate';
+
+// SIMD and Floating Point Registers
+export type ByteRegister = `b${number}`;  // b0 through b31
+export type HalfRegister = `h${number}`;  // h0 through h31
+export type SingleRegister = `s${number}`;  // s0 through s31
+export type DoubleRegister = `d${number}`;  // d0 through d31
+export type QuadRegister = `q${number}`;  // q0 through q31
+export type VectorRegister = `v${number}`;  // v0 through v31
+export type WorkRegister = `w${number}`;  // w0 through w31
+
+// IRuntimeVariableType definition
 export type IRuntimeVariableType = 
-  XRegister | // General-purpose 64-bit registers for integers and addresses (X0-X30, SP)
-  WRegister | // 32-bit view of the lower half of general-purpose registers (W0-W30)
-  VRegister | // 128-bit registers for floating-point and SIMD operations (V0-V31, can be accessed as D0-D31 for 64-bit, S0-S31 for 32-bit)
-  RuntimeVariable[] |
-  undefined; // Array of variables, which can be a mix of the above types
+    GeneralPurposeRegister | SpecialRegister | SystemRegister |
+    ByteRegister | HalfRegister | SingleRegister | DoubleRegister |
+    QuadRegister | VectorRegister | WorkRegister;
 
-// Assuming definitions of register types as follows:
-type XRegister = {
-  kind: 'xRegister';
-  value: bigint; // Use bigint for 64-bit integer representation
-};
-
-type WRegister = {
-  kind: 'wRegister';
-  value: number; // 32-bit integer
-};
-
-type VRegister = {
-  kind: 'vRegister';
-  value: Float64Array | Float32Array | Int32Array | Int16Array | Int8Array; // Depending on the operation, can represent different data types and sizes
-};
 
 export class RuntimeVariable {
 
@@ -155,10 +162,17 @@ export function timeout(ms: number) {
  * class because you can rely on some existing debugger or runtime.
 */
 export class QilingDebugger extends EventEmitter {
-	// TODO: figure out how to run qdb.py or use qiling hooks (python?) from this class
-	// FIXME: I may make this temporarily simply run qdb.py and then later implement the hooks in python
 	// NOTE: This class originated from MockRuntime in mockRuntime.ts
 
+
+	/** The port number for the server. */
+	private port: number = 0;
+
+	/** Represents the client socket used for communication. */
+	private client: net.Socket;
+
+	/** The host address for the runtime. */
+    private readonly host: string = 'localhost';
 
 	/**
 	 * Map that stores runtime variables. 
@@ -166,9 +180,7 @@ export class QilingDebugger extends EventEmitter {
 	 */
 	private variables = new Map<string, RuntimeVariable>();
 
-	// the contents (= lines) of the one and only file
-	private sourceLines: string[] = [];
-	private instructions: Line[] = [];
+	private qdbProcess: any;
 
 	// the initial (and one and only) file we are 'debugging'
 	private _sourceFile: string = '';
@@ -176,54 +188,48 @@ export class QilingDebugger extends EventEmitter {
 		return this._sourceFile;
 	}
 	
-	// This is the next line that will be 'executed'
-	private _currentLine = 0;
-	private get currentLine() {
-		return this._currentLine;
-	}
-
-	private set currentLine(x) {
-		this._currentLine = x;
-		this.instruction = x;
-	}
-
-	// This is the next instruction that will be 'executed'
-	public instruction= 0;
-
-	// maps from sourceFile to array of IRuntimeBreakpoint
-	private breakPoints = new Map<string, IRuntimeBreakpoint[]>();
-
 	// all instruction breakpoint addresses
 	private instructionBreakpoints = new Set<number>();
 
 	constructor(private fileAccessor: FileAccessor) {
 		super();
+		this.client = new net.Socket();
 	}
 
 	/**
 	 * Start executing the given program.
 	 */
-	//TODO: pass arguments to qdb.py (these are the launch.json configurations)
 	public async start(program: string, stopOnEntry: boolean, debug: boolean): Promise<void> {
-
+		
 		await this.loadSource(this.normalizePathAndCasing(program)); // load the program
 		//Get the path to qdb.py
-		var re = /\/out\/backend/gi;  
+		var re = /\/out\/backend/gi;
 		process.chdir(__dirname.replace(re, ""));
 		console.log("Current working directory: " + process.cwd());
-	  
-		let path = this.normalizePathAndCasing('./qdb.py');
-		const qdbProcess = spawn('python3', [path]); // load the program
-		qdbProcess.stdout.on('data', (data) => {
-			console.log(`stdout: ${data}`); 
+
+		let path = this.normalizePathAndCasing('src/backend/DebugServer/debugServer.py');
+		if (!program) 
+			return;
+		let binary = program.split('.')[0] // gets the binary name by removing the extension
+		this.qdbProcess = spawn('python3', [path, binary]); // load the program
+		this.qdbProcess.stdout.on('data', (data) => { // function for when there is standard output
+			console.log(`stdout: ${data}`); // just display in console.
+			this.port = parseInt(data.toString().trim()); // get the port number from the output
 		});
-		qdbProcess.stderr.on('data', (data) => {
+		this.qdbProcess.stderr.on('data', (data) => {
 			console.error(`stderr: ${data}`);
 		});
-		qdbProcess.on('close', (code) => {
-			console.log(`child process exited with code ${code}`);
+		this.qdbProcess.on('close', (code) => {
+			console.log(`debugServer exited with code ${code}`);
 		});
-		qdbProcess.stdin.write('q\n');
+		
+		if(this.port != 0) {
+			this.client.connect(this.port, this.host, () => {
+				console.log(`Connected to server on ${this.host}:${this.port}`);
+				// You can now send data to the server
+				// this.client.write('Hello Server!');
+			});
+		}
 		
 		if (debug) {
 			await this.verifyBreakpoints(this._sourceFile);
