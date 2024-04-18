@@ -179,7 +179,8 @@ def run(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler, port=80
     try:
         server_address = ('', port)
         httpd = server_class(server_address, handler_class)
-        print(f"Server started on port {port}")
+        input('start')
+        print(f"{port}")
         httpd.serve_forever()
     except KeyboardInterrupt:
         sys.exit()
