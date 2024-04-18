@@ -160,7 +160,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         
         try:
             data = json.loads(body)
-            #if file data is sent load file into ql for emulation
+            #if file data is sent load file into ql for emulation can be used to load file onto server from client
             if 'file' in data:
                 print(f'target: {str(data["file"])}')
                 try:
