@@ -553,28 +553,28 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 	 * @returns A Promise that resolves when the variables have been retrieved and the response has been sent.
 	 */
 	protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments, request?: DebugProtocol.Request): Promise<void> {
+//TODO: Implement properly, handle registers, stack, and heap
+		// let vs: RuntimeVariable[] = [];
 
-		let vs: RuntimeVariable[] = [];
+		// const v = this._variableHandles.get(args.variablesReference);
+		// if (v === 'locals') {
+		// 	vs = this._runtime.getLocalVariables();
+		// } else if (v === 'globals') {
+		// 	if (request) {
+		// 		this._cancellationTokens.set(request.seq, false);
+		// 		vs = await this._runtime.getGlobalVariables(() => !!this._cancellationTokens.get(request.seq));
+		// 		this._cancellationTokens.delete(request.seq);
+		// 	} else {
+		// 		vs = await this._runtime.getGlobalVariables();
+		// 	}
+		// } else if (v && Array.isArray(v.value)) {
+		// 	vs = v.value;
+		// }
 
-		const v = this._variableHandles.get(args.variablesReference);
-		if (v === 'locals') {
-			vs = this._runtime.getLocalVariables();
-		} else if (v === 'globals') {
-			if (request) {
-				this._cancellationTokens.set(request.seq, false);
-				vs = await this._runtime.getGlobalVariables(() => !!this._cancellationTokens.get(request.seq));
-				this._cancellationTokens.delete(request.seq);
-			} else {
-				vs = await this._runtime.getGlobalVariables();
-			}
-		} else if (v && Array.isArray(v.value)) {
-			vs = v.value;
-		}
-
-		response.body = {
-			variables: vs.map(v => this.convertFromRuntime(v))
-		};
-		this.sendResponse(response);
+		// response.body = {
+		// 	variables: vs.map(v => this.convertFromRuntime(v))
+		// };
+		// this.sendResponse(response);
 	}
 
 // 	protected setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): void {
@@ -1001,7 +1001,7 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 		// if (!isNaN(n)) {
 		// }
 		// return value;
-		return undefined; //TODO: Implement properly, handle registers, stack, and heap
+		return 'x0'; //TODO: Implement properly, handle registers, stack, and heap
 	}
 
 	/**
@@ -1020,49 +1020,49 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 			evaluateName: '$' + v.name
 		};
 
-		if (v.name.indexOf('lazy') >= 0) {
-			// a "lazy" variable needs an additional click to retrieve its value
+		// if (v.name.indexOf('lazy') >= 0) {
+		// 	// a "lazy" variable needs an additional click to retrieve its value
 
-			dapVariable.value = 'lazy var';		// placeholder value
-			v.reference ??= this._variableHandles.create(new RuntimeVariable('', [ new RuntimeVariable('', v.value) ]));
-			dapVariable.variablesReference = v.reference;
-			dapVariable.presentationHint = { lazy: true };
-		} else {
+		// 	dapVariable.value = 'lazy var';		// placeholder value
+		// 	v.reference ??= this._variableHandles.create(new RuntimeVariable('', [ new RuntimeVariable('', v.value) ]));
+		// 	dapVariable.variablesReference = v.reference;
+		// 	dapVariable.presentationHint = { lazy: true };
+		// } else {
 
-			if (Array.isArray(v.value)) {
-				dapVariable.value = 'Object';
-				v.reference ??= this._variableHandles.create(v);
-				dapVariable.variablesReference = v.reference;
-			} else {
+		// 	if (Array.isArray(v.value)) {
+		// 		dapVariable.value = 'Object';
+		// 		v.reference ??= this._variableHandles.create(v);
+		// 		dapVariable.variablesReference = v.reference;
+		// 	} else {
 
-				switch (typeof v.value) {
-					case 'number':
-						if (Math.round(v.value) === v.value) {
-							dapVariable.value = this.formatNumber(v.value);
-							(<any>dapVariable).__vscodeVariableMenuContext = 'simple';	// enable context menu contribution
-							dapVariable.type = 'integer';
-						} else {
-							// dapVariable.value = v.value.toString();
-							// dapVariable.type = 'float';
-						}
-						break;
-					case 'string':
-						dapVariable.value = `"${v.value}"`;
-						break;
-					case 'boolean':
-						dapVariable.value = v.value ? 'true' : 'false';
-						break;
-					default:
-						dapVariable.value = typeof v.value;
-						break;
-				}
-			}
-		}
+		// 		switch (typeof v.value) {
+		// 			case 'number':
+		// 				if (Math.round(v.value) === v.value) {
+		// 					dapVariable.value = this.formatNumber(v.value);
+		// 					(<any>dapVariable).__vscodeVariableMenuContext = 'simple';	// enable context menu contribution
+		// 					dapVariable.type = 'integer';
+		// 				} else {
+		// 					// dapVariable.value = v.value.toString();
+		// 					// dapVariable.type = 'float';
+		// 				}
+		// 				break;
+		// 			case 'string':
+		// 				dapVariable.value = `"${v.value}"`;
+		// 				break;
+		// 			case 'boolean':
+		// 				dapVariable.value = v.value ? 'true' : 'false';
+		// 				break;
+		// 			default:
+		// 				dapVariable.value = typeof v.value;
+		// 				break;
+		// 		}
+		// 	}
+		// }
 
-		if (v.memory) {
-			v.reference ??= this._variableHandles.create(v);
-			dapVariable.memoryReference = String(v.reference);
-		}
+		// if (v.memory) {
+		// 	v.reference ??= this._variableHandles.create(v);
+		// 	dapVariable.memoryReference = String(v.reference);
+		// }
 
 		return dapVariable;
 	}

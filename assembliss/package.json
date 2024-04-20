@@ -27,7 +27,6 @@
   "devDependencies": {
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
-    "path-browserify": "^1.0.1",
     "@types/vscode": "^1.87.0",
     "@typescript-eslint/eslint-plugin": "^7.0.2",
     "@typescript-eslint/parser": "^7.0.2",
@@ -37,6 +36,7 @@
     "@vscode/test-electron": "^2.3.9",
     "await-notify": "^1.0.1",
     "eslint": "^8.56.0",
+    "path-browserify": "^1.0.1",
     "tslint": "^5.16.0",
     "typescript": "^5.3.3"
   },
@@ -186,5 +186,8 @@
         "configuration": "./language-configuration.json"
       }
     ]
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
   }
 }
