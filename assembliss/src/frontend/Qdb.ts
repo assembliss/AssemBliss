@@ -32,16 +32,20 @@ import { basename } from 'path-browserify';
 //       }
 //     }
 //   }
+
+/**
+ * Represents the arguments for a launch request.
+ */
 interface ILaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
 	/** An absolute path to the "program" to debug. */
 	target: string;
 	/** Automatically stop target after launch. If not specified, target does not stop. */
 	stopOnEntry?: boolean;
-	/** enable logging the Debug Adapter Protocol */
+	/** Enable logging the Debug Adapter Protocol. */
 	trace?: boolean;
-	/** run without debugging */
+	/** Run without debugging. */
 	noDebug?: boolean;
-	// /** if specified, results in a simulated compile error in launch. */
+	// /** If specified, results in a simulated compile error in launch. */
 	// compileError?: 'default' | 'show' | 'hide';
 }
 
@@ -539,30 +543,39 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 		this.sendResponse(response);
 	}
 
-// 	protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments, request?: DebugProtocol.Request): Promise<void> {
+	/**
+	 * Handles the variablesRequest from the debugger.
+	 * Retrieves the variables based on the variablesReference provided in the arguments.
+	 * Populates the response with the retrieved variables and sends the response back to the debugger.
+	 * @param response - The response object to populate with the retrieved variables.
+	 * @param args - The arguments object containing the variablesReference.
+	 * @param request - The optional request object associated with the variablesRequest.
+	 * @returns A Promise that resolves when the variables have been retrieved and the response has been sent.
+	 */
+	protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments, request?: DebugProtocol.Request): Promise<void> {
 
-// 		let vs: RuntimeVariable[] = [];
+		let vs: RuntimeVariable[] = [];
 
-// 		const v = this._variableHandles.get(args.variablesReference);
-// 		if (v === 'locals') {
-// 			vs = this._runtime.getLocalVariables();
-// 		} else if (v === 'globals') {
-// 			if (request) {
-// 				this._cancellationTokens.set(request.seq, false);
-// 				vs = await this._runtime.getGlobalVariables(() => !!this._cancellationTokens.get(request.seq));
-// 				this._cancellationTokens.delete(request.seq);
-// 			} else {
-// 				vs = await this._runtime.getGlobalVariables();
-// 			}
-// 		} else if (v && Array.isArray(v.value)) {
-// 			vs = v.value;
-// 		}
+		const v = this._variableHandles.get(args.variablesReference);
+		if (v === 'locals') {
+			vs = this._runtime.getLocalVariables();
+		} else if (v === 'globals') {
+			if (request) {
+				this._cancellationTokens.set(request.seq, false);
+				vs = await this._runtime.getGlobalVariables(() => !!this._cancellationTokens.get(request.seq));
+				this._cancellationTokens.delete(request.seq);
+			} else {
+				vs = await this._runtime.getGlobalVariables();
+			}
+		} else if (v && Array.isArray(v.value)) {
+			vs = v.value;
+		}
 
-// 		response.body = {
-// 			variables: vs.map(v => this.convertFromRuntime(v))
-// 		};
-// 		this.sendResponse(response);
-// 	}
+		response.body = {
+			variables: vs.map(v => this.convertFromRuntime(v))
+		};
+		this.sendResponse(response);
+	}
 
 // 	protected setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): void {
 // 		const container = this._variableHandles.get(args.variablesReference);

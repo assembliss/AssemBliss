@@ -9,7 +9,7 @@ import random
 import subprocess
 
 #root fs file path
-ROOTFS_LOC = r"../../../rootfs/arm64_linux"
+ROOTFS_LOC = r"./rootfs/arm64_linux"
 #ARM instructions are 4 bytes long
 ARM_INSTRUCT_SIZE = 4
 #files to store program state
@@ -148,7 +148,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             except:
                 self.respond(400, "ql could not run")
         else:
-            self.respond(400, "Invalid request")
+            self.respond(400, f"Invalid request: {query_params}")
 
     #PUT request handler, used to attach file to server, NOT in use
     def do_PUT(self):

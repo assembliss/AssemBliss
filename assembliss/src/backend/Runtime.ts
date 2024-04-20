@@ -1,6 +1,5 @@
 import { spawn } from 'child_process';
 import { EventEmitter } from 'events';
-import * as net from 'net';
 
 export interface FileAccessor {
 	isWindows: boolean;
@@ -125,14 +124,15 @@ export class RuntimeVariable {
 	// }
 }
 
-// /** A Word in this context is a sequence of characters that form a token in the source code.
-//  * Index is the position of the word in the line.
-//  */
-// interface Word {
-// 	name: string;
-// 	line: number;
-// 	index: number;
-// }
+/** A Word in this context is a sequence of characters that form a token in the source code.
+ * Index is the position of the word in the line.
+ */
+interface Word {
+	// name: string;
+	text: string;
+	line: number;
+	// index: number;
+}
 
 interface Line {
 	line: number;
@@ -166,13 +166,10 @@ export class QilingDebugger extends EventEmitter {
 
 
 	/** The port number for the server. */
-	private port: number = 0;
-
-	/** Represents the client socket used for communication. */
-	private client: net.Socket;
+	private readonly PORT: number = 31415;
 
 	/** The host address for the runtime. */
-    private readonly host: string = 'localhost';
+    private readonly HOST: string = 'localhost';
 
 	/**
 	 * Map that stores runtime variables. 
@@ -187,13 +184,31 @@ export class QilingDebugger extends EventEmitter {
 	public get sourceFile() {
 		return this._sourceFile;
 	}
+
+	// the contents (= lines) of the one and only file
+	private sourceLines: string[] = [];
+	private instructions: Word[] = [];
 	
+	// This is the next line that will be 'executed'
+	private _currentLine = 0;
+	private get currentLine() {
+		return this._currentLine;
+	}
+	private set currentLine(x) {
+		this._currentLine = x;
+		// this.instruction = this.starts[x];
+		// this.instruction = x;
+	}
+
+	// public instruction = 0;
 	// all instruction breakpoint addresses
 	private instructionBreakpoints = new Set<number>();
 
+	// maps from sourceFile to array of IRuntimeBreakpoint
+	private breakPoints = new Map<string, IRuntimeBreakpoint[]>();
+
 	constructor(private fileAccessor: FileAccessor) {
 		super();
-		this.client = new net.Socket();
 	}
 
 	/**
@@ -210,11 +225,18 @@ export class QilingDebugger extends EventEmitter {
 		let path = this.normalizePathAndCasing('src/backend/DebugServer/debugServer.py');
 		if (!program) 
 			return;
-		let binary = program.split('.')[0] // gets the binary name by removing the extension
+		let binary = program.split('.')[0]; // gets the binary name by removing the extension
 		this.qdbProcess = spawn('python3', [path, binary]); // load the program
 		this.qdbProcess.stdout.on('data', (data) => { // function for when there is standard output
 			console.log(`stdout: ${data}`); // just display in console.
-			this.port = parseInt(data.toString().trim()); // get the port number from the output
+			// Note: The following is a failed implementation of getting a randomly generated port number from the output of the python script.
+			// this.port = parseInt(data.toString().trim()); // get the port number from the output
+			// console.log(`Port number: ${this.port}`);
+			// this.client.connect(this.port, this.host, () => {
+			// 	console.log(`Connected to server on ${this.host}:${this.port}`);
+			// 	// You can now send data to the server
+			// 	// this.client.write('Hello Server!');
+			// });
 		});
 		this.qdbProcess.stderr.on('data', (data) => {
 			console.error(`stderr: ${data}`);
@@ -222,14 +244,6 @@ export class QilingDebugger extends EventEmitter {
 		this.qdbProcess.on('close', (code) => {
 			console.log(`debugServer exited with code ${code}`);
 		});
-		
-		if(this.port != 0) {
-			this.client.connect(this.port, this.host, () => {
-				console.log(`Connected to server on ${this.host}:${this.port}`);
-				// You can now send data to the server
-				// this.client.write('Hello Server!');
-			});
-		}
 		
 		if (debug) {
 			await this.verifyBreakpoints(this._sourceFile);
@@ -243,6 +257,19 @@ export class QilingDebugger extends EventEmitter {
 		} else {
 			this.continue(false);
 		}
+
+	}
+
+	async getMemMap(): Promise<void> {
+		//TODO: implement this
+	}
+
+	async getRun(): Promise<void> {
+		//TODO: implement this
+	}
+
+	async getCont(): Promise<void> {
+		//TODO: implement this
 	}
 
 	/**
@@ -251,14 +278,14 @@ export class QilingDebugger extends EventEmitter {
 	 */
 	public continue(reverse: boolean) {
 
-		// while (!this.executeLine(this.currentLine, reverse)) {
-		// 	if (this.updateCurrentLine(reverse)) {
-		// 		break;
-		// 	}
-		// 	if (this.findNextStatement(reverse)) {
-		// 		break;
-		// 	}
-		// }
+		while (!this.executeLine(this.currentLine, reverse)) {
+			if (this.updateCurrentLine(reverse)) {
+				break;
+			}
+			if (this.findNextStatement(reverse)) {
+				break;
+			}
+		}
 		return; // TODO: implement this
 	}
 
@@ -285,23 +312,6 @@ export class QilingDebugger extends EventEmitter {
 		// 		}
 		// 	}
 		// }
-		const net = require('net');
-
-		const client = new net.Socket();
-		const port = 9999;
-		const host = 'localhost';
-
-		client.connect(port, host, function() {
-			console.log('Connected');
-			client.write('START;\nStep\nDATA END;');
-		});
-
-		let dataResponse = '';
-
-		client.on('data', function(data) {
-			dataResponse += data;
-			console.log('Server response: ' + data);
-		});
 
 		// client.on('close', function() {
 		// 	console.log('Connection closed');
@@ -631,9 +641,12 @@ export class QilingDebugger extends EventEmitter {
 	 * How it works: The source file is read and split into lines.
 	 * Each line is stored as an instruction.
 	 * The instructions are stored in the 'instructions' array.
+	 * NOTE: This is here because of legacy code. Word objects used to have more fields. 
+	 * To refactor, we can remove the Word interface and just use the Instructions interface.
 	 * @param memory - The memory to initialize the contents from.
 	 */
 	private initializeContents(memory: Uint8Array) {
+
 		this.sourceLines = new TextDecoder().decode(memory).split(/\r?\n/);
 
 		this.instructions = [];
@@ -684,110 +697,28 @@ export class QilingDebugger extends EventEmitter {
 	// 	return false;
 	// }
 
-	// /**
-	//  * "execute a line" of the readme markdown.
-	//  * Returns true if execution sent out a stopped event and needs to stop.
-	//  */
-	// private executeLine(ln: number, reverse: boolean): boolean {
+	/**
+	 * Parses the response from the server. Change register values and memory values.
+	 * @param response - The response to parse.
+	 */
+	private parseResponse(response: any): void { // TODO: chamge any to proper return type
+		//TODO: implement this
+	}
 
-	// 	// first "execute" the instructions associated with this line and potentially hit instruction breakpoints
-	// 	while (reverse ? this.instruction >= this.starts[ln] : this.instruction < this.ends[ln]) {
-	// 		reverse ? this.instruction-- : this.instruction++;
-	// 		if (this.instructionBreakpoints.has(this.instruction)) {
-	// 			this.sendEvent('stopOnInstructionBreakpoint');
-	// 			return true;
-	// 		}
-	// 	}
-
-	// 	const line = this.getLine(ln);
-
-	// 	// find variable accesses
-	// 	let reg0 = /\$([a-z][a-z0-9]*)(=(false|true|[0-9]+(\.[0-9]+)?|\".*\"|\{.*\}))?/ig;
-	// 	let matches0: RegExpExecArray | null;
-	// 	while (matches0 = reg0.exec(line)) {
-	// 		if (matches0.length === 5) {
-
-	// 			let access: string | undefined;
-
-	// 			const name = matches0[1];
-	// 			const value = matches0[3];
-
-	// 			let v = new RuntimeVariable(name, value);
-
-	// 			if (value && value.length > 0) {
-
-	// 				if (value === 'true') {
-	// 					v.value = true;
-	// 				} else if (value === 'false') {
-	// 					v.value = false;
-	// 				} else if (value[0] === '"') {
-	// 					v.value = value.slice(1, -1);
-	// 				} else if (value[0] === '{') {
-	// 					v.value = [
-	// 						new RuntimeVariable('fBool', true),
-	// 						new RuntimeVariable('fInteger', 123),
-	// 						new RuntimeVariable('fString', 'hello'),
-	// 						new RuntimeVariable('flazyInteger', 321)
-	// 					];
-	// 				} else {
-	// 					v.value = parseFloat(value);
-	// 				}
-
-	// 				if (this.variables.has(name)) {
-	// 					// the first write access to a variable is the "declaration" and not a "write access"
-	// 					access = 'write';
-	// 				}
-	// 				this.variables.set(name, v);
-	// 			} else {
-	// 				if (this.variables.has(name)) {
-	// 					// variable must exist in order to trigger a read access
-	// 					access = 'read';
-	// 				}
-	// 			}
-
-	// 			const accessType = this.breakAddresses.get(name);
-	// 			if (access && accessType && accessType.indexOf(access) >= 0) {
-	// 				this.sendEvent('stopOnDataBreakpoint', access);
-	// 				return true;
-	// 			}
-	// 		}
-	// 	}
-
-	// 	// if 'log(...)' found in source -> send argument to debug console
-	// 	const reg1 = /(log|prio|out|err)\(([^\)]*)\)/g;
-	// 	let matches1: RegExpExecArray | null;
-	// 	while (matches1 = reg1.exec(line)) {
-	// 		if (matches1.length === 3) {
-	// 			this.sendEvent('output', matches1[1], matches1[2], this._sourceFile, ln, matches1.index);
-	// 		}
-	// 	}
-
-	// 	// if pattern 'exception(...)' found in source -> throw named exception
-	// 	const matches2 = /exception\((.*)\)/.exec(line);
-	// 	if (matches2 && matches2.length === 2) {
-	// 		const exception = matches2[1].trim();
-	// 		if (this.namedException === exception) {
-	// 			this.sendEvent('stopOnException', exception);
-	// 			return true;
-	// 		} else {
-	// 			if (this.otherExceptions) {
-	// 				this.sendEvent('stopOnException', undefined);
-	// 				return true;
-	// 			}
-	// 		}
-	// 	} else {
-	// 		// if word 'exception' found in source -> throw exception
-	// 		if (line.indexOf('exception') >= 0) {
-	// 			if (this.otherExceptions) {
-	// 				this.sendEvent('stopOnException', undefined);
-	// 				return true;
-	// 			}
-	// 		}
-	// 	}
-
-	// 	// nothing interesting found -> continue
-	// 	return false;
-	// }
+	/**
+	 * "execute a line" of the readme markdown.
+	 * Returns true if execution sent out a stopped event and needs to stop.
+	 */
+	private executeLine(ln: number, reverse: boolean): boolean {
+		//execute instruction on server
+		let response = this.getCont(); // FIXME: get proper return type
+		this.parseResponse(response); // populate runtime registers and memory
+		if (this.instructionBreakpoints.has(ln)) {
+			this.sendEvent('stopOnInstructionBreakpoint');
+			return true;
+		}
+		return false;
+	}
 
 	/**
 	 * Verifies the breakpoints for a given path.
