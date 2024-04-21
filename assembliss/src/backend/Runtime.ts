@@ -135,10 +135,10 @@ interface Word {
 	// index: number;
 }
 
-interface Line {
-	line: number;
-	text: string;
-}
+// interface Line {
+// 	line: number;
+// 	text: string;
+// }
 
 /**
  * Delays the execution for the specified number of milliseconds.
@@ -174,7 +174,6 @@ export class QilingDebugger extends EventEmitter {
 
 	/**
 	 * Map that stores runtime variables. 
-	 * NOTE: Might refactor to be registers or just use registers as variables.
 	 */
 	private variables = new Map<string, RuntimeVariable>();
 
@@ -274,7 +273,9 @@ export class QilingDebugger extends EventEmitter {
 	}
 
 	async getCont(): Promise<void> {
-		//TODO: implement this, Make sure to parse the response and update the registers and memory
+		const response = await fetch(`http://${this.HOST}:${this.PORT}/?get_cont=true`);
+		const data = await response.json();
+		this.parseResponse(data);
 	}
 
 	/**
@@ -714,279 +715,27 @@ export class QilingDebugger extends EventEmitter {
 			//parse int response["line_number"]
 			this.currentLine = parseInt(response["line_number"]) + 1; //FIXME: this may not need to add 1
 		}
-		//response schema. TODO: delete this variable when done.
-		const data = {
-			interrupt: "na",
-			line_number: "?",
-			insn: {
-				memory: "0x4000b0",
-				instruction: "mov x0, #1",
-			},
-			regs: {
-				x0: 0,
-				x1: 0,
-				x2: 0,
-				x3: 0,
-				x4: 0,
-				x5: 0,
-				x6: 0,
-				x7: 0,
-				x8: 0,
-				x9: 0,
-				x10: 0,
-				x11: 0,
-				x12: 0,
-				x13: 0,
-				x14: 0,
-				x15: 0,
-				x16: 0,
-				x17: 0,
-				x18: 0,
-				x19: 0,
-				x20: 0,
-				x21: 0,
-				x22: 0,
-				x23: 0,
-				x24: 0,
-				x25: 0,
-				x26: 0,
-				x27: 0,
-				x28: 0,
-				x29: 0,
-				x30: 0,
-				sp: 140737488412080,
-				pc: 4194480,
-				lr: 0,
-				cpacr_el1: 3145728,
-				tpidr_el0: 0,
-				pstate: 1073742789,
-				b0: 0,
-				b1: 0,
-				b2: 0,
-				b3: 0,
-				b4: 0,
-				b5: 0,
-				b6: 0,
-				b7: 0,
-				b8: 0,
-				b9: 0,
-				b10: 0,
-				b11: 0,
-				b12: 0,
-				b13: 0,
-				b14: 0,
-				b15: 0,
-				b16: 0,
-				b17: 0,
-				b18: 0,
-				b19: 0,
-				b20: 0,
-				b21: 0,
-				b22: 0,
-				b23: 0,
-				b24: 0,
-				b25: 0,
-				b26: 0,
-				b27: 0,
-				b28: 0,
-				b29: 0,
-				b30: 0,
-				b31: 0,
-				d0: 0,
-				d1: 0,
-				d2: 0,
-				d3: 0,
-				d4: 0,
-				d5: 0,
-				d6: 0,
-				d7: 0,
-				d8: 0,
-				d9: 0,
-				d10: 0,
-				d11: 0,
-				d12: 0,
-				d13: 0,
-				d14: 0,
-				d15: 0,
-				d16: 0,
-				d17: 0,
-				d18: 0,
-				d19: 0,
-				d20: 0,
-				d21: 0,
-				d22: 0,
-				d23: 0,
-				d24: 0,
-				d25: 0,
-				d26: 0,
-				d27: 0,
-				d28: 0,
-				d29: 0,
-				d30: 0,
-				d31: 0,
-				h0: 0,
-				h1: 0,
-				h2: 0,
-				h3: 0,
-				h4: 0,
-				h5: 0,
-				h6: 0,
-				h7: 0,
-				h8: 0,
-				h9: 0,
-				h10: 0,
-				h11: 0,
-				h12: 0,
-				h13: 0,
-				h14: 0,
-				h15: 0,
-				h16: 0,
-				h17: 0,
-				h18: 0,
-				h19: 0,
-				h20: 0,
-				h21: 0,
-				h22: 0,
-				h23: 0,
-				h24: 0,
-				h25: 0,
-				h26: 0,
-				h27: 0,
-				h28: 0,
-				h29: 0,
-				h30: 0,
-				h31: 0,
-				q0: 0,
-				q1: 0,
-				q2: 0,
-				q3: 0,
-				q4: 0,
-				q5: 0,
-				q6: 0,
-				q7: 0,
-				q8: 0,
-				q9: 0,
-				q10: 0,
-				q11: 0,
-				q12: 0,
-				q13: 0,
-				q14: 0,
-				q15: 0,
-				q16: 0,
-				q17: 0,
-				q18: 0,
-				q19: 0,
-				q20: 0,
-				q21: 0,
-				q22: 0,
-				q23: 0,
-				q24: 0,
-				q25: 0,
-				q26: 0,
-				q27: 0,
-				q28: 0,
-				q29: 0,
-				q30: 0,
-				q31: 0,
-				s0: 0,
-				s1: 0,
-				s2: 0,
-				s3: 0,
-				s4: 0,
-				s5: 0,
-				s6: 0,
-				s7: 0,
-				s8: 0,
-				s9: 0,
-				s10: 0,
-				s11: 0,
-				s12: 0,
-				s13: 0,
-				s14: 0,
-				s15: 0,
-				s16: 0,
-				s17: 0,
-				s18: 0,
-				s19: 0,
-				s20: 0,
-				s21: 0,
-				s22: 0,
-				s23: 0,
-				s24: 0,
-				s25: 0,
-				s26: 0,
-				s27: 0,
-				s28: 0,
-				s29: 0,
-				s30: 0,
-				s31: 0,
-				w0: 0,
-				w1: 0,
-				w2: 0,
-				w3: 0,
-				w4: 0,
-				w5: 0,
-				w6: 0,
-				w7: 0,
-				w8: 0,
-				w9: 0,
-				w10: 0,
-				w11: 0,
-				w12: 0,
-				w13: 0,
-				w14: 0,
-				w15: 0,
-				w16: 0,
-				w17: 0,
-				w18: 0,
-				w19: 0,
-				w20: 0,
-				w21: 0,
-				w22: 0,
-				w23: 0,
-				w24: 0,
-				w25: 0,
-				w26: 0,
-				w27: 0,
-				w28: 0,
-				w29: 0,
-				w30: 0,
-				v0: 0,
-				v1: 0,
-				v2: 0,
-				v3: 0,
-				v4: 0,
-				v5: 0,
-				v6: 0,
-				v7: 0,
-				v8: 0,
-				v9: 0,
-				v10: 0,
-				v11: 0,
-				v12: 0,
-				v13: 0,
-				v14: 0,
-				v15: 0,
-				v16: 0,
-				v17: 0,
-				v18: 0,
-				v19: 0,
-				v20: 0,
-				v21: 0,
-				v22: 0,
-				v23: 0,
-				v24: 0,
-				v25: 0,
-				v26: 0,
-				v27: 0,
-				v28: 0,
-				v29: 0,
-				v30: 0,
-				v31: 0,
+
+		//Clear this.variables and update it with the new values
+		this.variables.clear();
+
+		let interrupt = response["interrupt"];
+		let variable = new RuntimeVariable("interrupt", interrupt);
+		this.variables.set("interrupt", variable);
+
+		let memory = response["insn"]["memory"];
+		variable = new RuntimeVariable("memory", memory);
+		this.variables.set("memory", variable);
+
+		let instruction = response["insn"]["instruction"];
+		variable = new RuntimeVariable("instruction", instruction);
+		this.variables.set("instruction", variable);
+
+
+		for (let reg in response["regs"]) {
+			variable = new RuntimeVariable(reg, response["regs"][reg]);
+			this.variables.set(reg, variable);
 		}
-		
-}
-		/*
 	}
 
 	/**

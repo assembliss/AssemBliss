@@ -445,7 +445,7 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 	 * @param response - The response object to send back to the client.
 	 * @param args - The arguments for the stack trace request.
 	 */
-	protected stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): void {
+	protected stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): void { //TODO: disable this in DAP until ready to implement
 
 		const startFrame = typeof args.startFrame === 'number' ? args.startFrame : 0;
 		const maxLevels = typeof args.levels === 'number' ? args.levels : 1000;
