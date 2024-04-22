@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import { EventEmitter } from 'events';
 import fetch from 'node-fetch';
+import * as vscode from 'vscode';
 
 export interface FileAccessor {
 	isWindows: boolean;
@@ -228,7 +229,8 @@ export class QilingDebugger extends EventEmitter {
 		let binary = program.split('.')[0]; // gets the binary name by removing the extension
 		this.qdbProcess = spawn('python3', [path, binary]); // load the program
 		this.qdbProcess.stdout.on('data', (data) => { // function for when there is standard output
-			console.log(`stdout: ${data}`); // just display in console.
+			// console.log(`stdout: ${data}`); // just display in console.
+			vscode.debug.activeDebugConsole.appendLine(data); // display in debug console
 			// Note: The following is a failed implementation of getting a randomly generated port number from the output of the python script.
 			// this.port = parseInt(data.toString().trim()); // get the port number from the output
 			// console.log(`Port number: ${this.port}`);
@@ -245,34 +247,43 @@ export class QilingDebugger extends EventEmitter {
 			console.log(`debugServer exited with code ${code}`);
 		});
 		
-		await this.getRun(); // start the program
 
 		if (debug) {
+			await this.getRun(); // start the program/
 			await this.verifyBreakpoints(this._sourceFile);
-
-			if (stopOnEntry) {
-				this.findNextStatement(false, 'stopOnEntry');
-			} else {
-				// we just start to run until we hit a breakpoint, an exception, or the end of the program
-				this.continue(false);
+			if(!stopOnEntry) {
+				await this.continue(false);
 			}
 		} else {
-			this.continue(false);
+			this.getRunAll();
 		}
 
 	}
 
-	async getMemMap(): Promise<void> {
+	private async getMemMap(): Promise<void> {
 		//TODO: implement this
 	}
 
-	async getRun(): Promise<void> {
-		const respone = await fetch(`http://${this.HOST}:${this.PORT}/?get_run=true`)
-		const data = await respone.json();
+	private async getRun(): Promise<void> {
+		const response = await fetch(`http://${this.HOST}:${this.PORT}/?get_run=true`);
+		const data = await response.json();
 		this.parseResponse(data);
 	}
 
-	async getCont(): Promise<void> {
+	private async getRunAll(): Promise<void> {
+		await fetch(`http://${this.HOST}:${this.PORT}/?get_run_all=true`);
+		// const response = await fetch(`http://${this.HOST}:${this.PORT}/?get_run_all=true`);
+		// const data = await response.json();
+		// this.parseResponse(data);
+	}
+
+	private async getCont(): Promise<void> {
+		// const response = await Promise.race([
+		// 	fetch(`http://${this.HOST}:${this.PORT}/?get_cont=true`),
+		// 	new Promise((_, reject) =>
+		// 		setTimeout(() => reject(console.error("Request timed out")), 5000)
+		// 	)
+		// ]);
 		const response = await fetch(`http://${this.HOST}:${this.PORT}/?get_cont=true`);
 		const data = await response.json();
 		this.parseResponse(data);
@@ -282,17 +293,17 @@ export class QilingDebugger extends EventEmitter {
 	 * Continue execution to the end/beginning.
 	 * @param reverse - If true continue execution in reverse. (Reverse execution is not supported)
 	 */
-	public continue(reverse: boolean) {
+	public async continue(reverse: boolean) {
 
-		while (!this.executeLine(this.currentLine)) {
-			if (this.updateCurrentLine(reverse)) {
-				break;
-			}
-			if (this.findNextStatement(reverse)) {
-				break;
-			}
+		while (await !this.executeLine(this.currentLine)) { // execute the current line and check if it needs to stop
+			// if (this.updateCurrentLine(reverse)) {
+			// 	break;
+			// }
+			// if (this.findNextStatement(reverse)) {
+			// 	break;
+			// }
 		}
-		return; // TODO: implement this
+		return; 
 	}
 
 	
@@ -664,48 +675,6 @@ export class QilingDebugger extends EventEmitter {
 		}
 	}
 
-	// /**
-	//  * return true on stop
-	//  */
-	 private findNextStatement(reverse: boolean, stepEvent?: string): boolean {
-//TODO: implement this
-		return false;
-	// 	for (let ln = this.currentLine; reverse ? ln >= 0 : ln < this.sourceLines.length; reverse ? ln-- : ln++) {
-
-	// 		// is there a source breakpoint?
-	// 		const breakpoints = this.breakPoints.get(this._sourceFile);
-	// 		if (breakpoints) {
-	// 			const bps = breakpoints.filter(bp => bp.line === ln);
-	// 			if (bps.length > 0) {
-
-	// 				// send 'stopped' event
-	// 				this.sendEvent('stopOnBreakpoint');
-
-	// 				// the following shows the use of 'breakpoint' events to update properties of a breakpoint in the UI
-	// 				// if breakpoint is not yet verified, verify it now and send a 'breakpoint' update event
-	// 				if (!bps[0].verified) {
-	// 					bps[0].verified = true;
-	// 					this.sendEvent('breakpointValidated', bps[0]);
-	// 				}
-
-	// 				this.currentLine = ln;
-	// 				return true;
-	// 			}
-	// 		}
-
-	// 		const line = this.getLine(ln);
-	// 		if (line.length > 0) {
-	// 			this.currentLine = ln;
-	// 			break;
-	// 		}
-	// 	}
-	// 	if (stepEvent) {
-	// 		this.sendEvent(stepEvent);
-	// 		return true;
-	// 	}
-	// 	return false;
-	}
-
 	/**
 	 * Parses the response from the server. Change register values and memory values.
 	 * @param response - The response to parse in json format.
@@ -713,7 +682,7 @@ export class QilingDebugger extends EventEmitter {
 	private parseResponse(response: JSON) {
 		if (response["line_number"] !== "?") { // line number is ? when the first instruction has not been executed yet
 			//parse int response["line_number"]
-			this.currentLine = parseInt(response["line_number"]) + 1; //FIXME: this may not need to add 1
+			this.currentLine = parseInt(response["line_number"]);
 		}
 
 		//Clear this.variables and update it with the new values
@@ -742,9 +711,9 @@ export class QilingDebugger extends EventEmitter {
 	 * "execute a line" of the readme markdown.
 	 * Returns true if execution sent out a stopped event and needs to stop.
 	 */
-	private executeLine(ln: number): boolean {
+	private async executeLine(ln: number): Promise<boolean> {
 		//execute instruction on server
-		this.getCont(); // FIXME: get proper return type
+		await this.getCont();
 		if (this.instructionBreakpoints.has(ln)) {
 			this.sendEvent('stopOnInstructionBreakpoint');
 			return true;
