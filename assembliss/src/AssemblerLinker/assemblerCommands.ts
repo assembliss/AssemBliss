@@ -54,7 +54,7 @@ export function activateAssemblerCommands(context: vscode.ExtensionContext) {
 						//Command string for assembler
 						var objectFileName = fn.slice(0,-2)
 						//aarch64-linux-gnu-as
-						const cmd = `${assemblerCommand} ${fn} -o ${objectFileName}.obj`;
+						const cmd = `${assemblerCommand} ${fn} -g -o ${objectFileName}.obj`;
 						cmdSeq.push(cmd)
 					});
 
