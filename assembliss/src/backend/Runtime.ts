@@ -56,27 +56,59 @@ export type GeneralPurposeRegister =
     | 'x8' | 'x9' | 'x10' | 'x11' | 'x12' | 'x13' | 'x14' | 'x15'
     | 'x16' | 'x17' | 'x18' | 'x19' | 'x20' | 'x21' | 'x22' | 'x23'
     | 'x24' | 'x25' | 'x26' | 'x27' | 'x28' | 'x29' | 'x30';
-
+export function isGeneralPurposeRegister(register: string): register is GeneralPurposeRegister {
+	return register.startsWith('x') && parseInt(register.slice(1)) >= 0 && parseInt(register.slice(1)) <= 30;
+}
 // Special Registers
 export type SpecialRegister = 'sp' | 'pc' | 'lr';
-
+export function isSpecialRegister(register: string): register is SpecialRegister {
+	return register === 'sp' || register === 'pc' || register === 'lr';
+}
 // System Registers
 export type SystemRegister = 'cpacr_el1' | 'tpidr_el0' | 'pstate';
-
+export function isSystemRegister(register: string): register is SystemRegister {
+	return register === 'cpacr_el1' || register === 'tpidr_el0' || register === 'pstate';
+}
 // SIMD and Floating Point Registers
 export type ByteRegister = `b${number}`;  // b0 through b31
+export function isByteRegister(register: string): register is ByteRegister {
+	return register.startsWith('b') && parseInt(register.slice(1)) >= 0 && parseInt(register.slice(1)) <= 31;
+}
 export type HalfRegister = `h${number}`;  // h0 through h31
+export function isHalfRegister(register: string): register is HalfRegister {
+	return register.startsWith('h') && parseInt(register.slice(1)) >= 0 && parseInt(register.slice(1)) <= 31;
+}
 export type SingleRegister = `s${number}`;  // s0 through s31
+export function isSingleRegister(register: string): register is SingleRegister {
+	return register.startsWith('s') && parseInt(register.slice(1)) >= 0 && parseInt(register.slice(1)) <= 31;
+}
 export type DoubleRegister = `d${number}`;  // d0 through d31
+export function isDoubleRegister(register: string): register is DoubleRegister {
+	return register.startsWith('d') && parseInt(register.slice(1)) >= 0 && parseInt(register.slice(1)) <= 31;
+}
 export type QuadRegister = `q${number}`;  // q0 through q31
+export function isQuadRegister(register: string): register is QuadRegister {
+	return register.startsWith('q') && parseInt(register.slice(1)) >= 0 && parseInt(register.slice(1)) <= 31;
+}
 export type VectorRegister = `v${number}`;  // v0 through v31
+export function isVectorRegister(register: string): register is VectorRegister {
+	return register.startsWith('v') && parseInt(register.slice(1)) >= 0 && parseInt(register.slice(1)) <= 31;
+}
 export type WorkRegister = `w${number}`;  // w0 through w31
+export function isWorkRegister(register: string): register is WorkRegister {
+	return register.startsWith('w') && parseInt(register.slice(1)) >= 0 && parseInt(register.slice(1)) <= 31;
+}
 
+export type Register = GeneralPurposeRegister | SpecialRegister | 
+	SystemRegister | ByteRegister | 
+	HalfRegister | SingleRegister | 
+	DoubleRegister | QuadRegister | 
+	VectorRegister | WorkRegister
+;
+
+// export type Interrupt = 
 // IRuntimeVariableType definition
-export type IRuntimeVariableType = 
-    GeneralPurposeRegister | SpecialRegister | SystemRegister |
-    ByteRegister | HalfRegister | SingleRegister | DoubleRegister |
-    QuadRegister | VectorRegister | WorkRegister;
+export type IRuntimeVariableType = Register | "Interrupt" | "Memory" | "Instruction" ;
 
 
 export class RuntimeVariable {
@@ -203,10 +235,14 @@ export class QilingDebugger extends EventEmitter {
 
 	// public instruction = 0;
 	// all instruction breakpoint addresses
-	private instructionBreakpoints = new Set<number>();
+	// private instructionBreakpoints = new Set<number>();
 
 	// maps from sourceFile to array of IRuntimeBreakpoint
 	private breakPoints = new Map<string, IRuntimeBreakpoint[]>();
+
+	// since we want to send breakpoint events, we will assign an id to every event
+	// so that the frontend can match events with breakpoints.
+	private breakpointId = 1;
 
 	constructor(private fileAccessor: FileAccessor) {
 		super();
@@ -249,6 +285,7 @@ export class QilingDebugger extends EventEmitter {
 		
 
 		if (debug) {
+			timeout(1000); // wait for the server to start
 			await this.getRun(); // start the program/
 			await this.verifyBreakpoints(this._sourceFile);
 			if(!stopOnEntry) {
@@ -260,11 +297,14 @@ export class QilingDebugger extends EventEmitter {
 
 	}
 
-	private async getMemMap(): Promise<void> {
-		//TODO: implement this
-	}
+	// private async getMemMap(): Promise<JSON> {
+	// 	timeout(1000); 
+	// 	const response = await fetch(`http://${this.HOST}:${this.PORT}/?get_MemMap=true`);
+	// 	return await response.json();
+	// }
 
 	private async getRun(): Promise<void> {
+		timeout(1000); // wait for the server to start
 		const response = await fetch(`http://${this.HOST}:${this.PORT}/?get_run=true`);
 		const data = await response.json();
 		this.parseResponse(data);
@@ -314,32 +354,13 @@ export class QilingDebugger extends EventEmitter {
 	 * @param reverse - Indicates whether to step in reverse or forward direction. (Reverse execution is not supported)
 	 */
 	public step(instruction: boolean, reverse: boolean) {
-		// TODO: implement this
-		// if (instruction) {
-		// 	if (reverse) {
-		// 		this.instruction--;
-		// 	} else {
-		// 		this.instruction++;
-		// 	}
-		// 	this.sendEvent('stopOnStep');
-		// } else {
-		// 	if (!this.executeLine(this.currentLine, reverse)) {
-		// 		if (!this.updateCurrentLine(reverse)) {
-		// 			this.findNextStatement(reverse, 'stopOnStep');
-		// 		}
-		// 	}
-		// }
-
-		// client.on('close', function() {
-		// 	console.log('Connection closed');
-		// });
+		this.getCont();
 		this.sendEvent('stopOnStep'); // this sends the event to the frontend
 		
 	}
 
-	private updateCurrentLine(reverse: boolean): boolean {
-		//TODO: implement this
-		return false;
+	// private updateCurrentLine(reverse: boolean): boolean {
+		// return false;
 	// 	if (reverse) {
 	// 		if (this.currentLine > 0) {
 	// 			this.currentLine--;
@@ -361,7 +382,7 @@ export class QilingDebugger extends EventEmitter {
 	// 		}
 	// 	}
 	// 	return false;
-	}
+	// }
 
 	// /**
 	//  * "Step into" for Mock debug means: go to next character
@@ -475,36 +496,35 @@ export class QilingDebugger extends EventEmitter {
 	//  * Set breakpoint in file with given line.
 	//  */
 	public async setBreakPoint(path: string, line: number): Promise<IRuntimeBreakpoint> {
-		// path = this.normalizePathAndCasing(path);
+		path = this.normalizePathAndCasing(path);
 
-		// const bp: IRuntimeBreakpoint = { verified: false, line, id: this.breakpointId++ };
-		// let bps = this.breakPoints.get(path);
-		// if (!bps) {
-		// 	bps = new Array<IRuntimeBreakpoint>();
-		// 	this.breakPoints.set(path, bps);
-		// }
-		// bps.push(bp);
+		const bp: IRuntimeBreakpoint = { verified: false, line, id: this.breakpointId++ };
+		let bps = this.breakPoints.get(path);
+		if (!bps) {
+			bps = new Array<IRuntimeBreakpoint>();
+			this.breakPoints.set(path, bps);
+		}
+		bps.push(bp);
 
-		// await this.verifyBreakpoints(path);
+		await this.verifyBreakpoints(path);
 
-		// return bp;
-		return { id: 0, line, verified: false }; // TODO: implement this
+		return bp;
+		return { id: 0, line, verified: false };
 	}
 
 	/*
 	 * Clear breakpoint in file with given line.
 	 */
 	public clearBreakPoint(path: string, line: number): IRuntimeBreakpoint | undefined {
-		// const bps = this.breakPoints.get(this.normalizePathAndCasing(path));
-		// if (bps) {
-		// 	const index = bps.findIndex(bp => bp.line === line);
-		// 	if (index >= 0) {
-		// 		const bp = bps[index];
-		// 		bps.splice(index, 1);
-		// 		return bp;
-		// 	}
-		// }
-		return undefined; // TODO: implement this
+		const bps = this.breakPoints.get(this.normalizePathAndCasing(path));
+		if (bps) {
+			const index = bps.findIndex(bp => bp.line === line);
+			if (index >= 0) {
+				const bp = bps[index];
+				bps.splice(index, 1);
+				return bp;
+			}
+		}
 	}
 
 	/**
@@ -540,23 +560,23 @@ export class QilingDebugger extends EventEmitter {
 	// 	this.otherExceptions = otherExceptions;
 	// }
 
-	/**
-	 * Sets an instruction breakpoint at the specified address.
-	 * 
-	 * @param address - The address where the instruction breakpoint should be set.
-	 * @returns A boolean indicating whether the instruction breakpoint was successfully set.
-	 */
-	public setInstructionBreakpoint(address: number): boolean {
-		this.instructionBreakpoints.add(address);
-		return true;
-	}
+	// /**
+	//  * Sets an instruction breakpoint at the specified address.
+	//  * 
+	//  * @param address - The address where the instruction breakpoint should be set.
+	//  * @returns A boolean indicating whether the instruction breakpoint was successfully set.
+	//  */
+	// public setInstructionBreakpoint(address: number): boolean {
+	// 	this.instructionBreakpoints.add(address);
+	// 	return true;
+	// }
 
-	/**
-	 * Clears all instruction breakpoints.
-	 */
-	public clearInstructionBreakpoints(): void {
-		this.instructionBreakpoints.clear();
-	}
+	// /**
+	//  * Clears all instruction breakpoints.
+	//  */
+	// public clearInstructionBreakpoints(): void {
+	// 	this.instructionBreakpoints.clear();
+	// }
 
 	// public async getGlobalVariables(cancellationToken?: () => boolean ): Promise<RuntimeVariable[]> {
 
@@ -573,16 +593,135 @@ export class QilingDebugger extends EventEmitter {
 	// 	return a;
 	// }
 
-	// public getLocalVariables(): RuntimeVariable[] {
-	// 	return Array.from(this.variables, ([name, value]) => value);
-	// }
+	public getGeneralRegisters(): RuntimeVariable[] {
+		// return general purpose type registers from this.variables
+		let generalRegisters: RuntimeVariable[] = [];
+		for (let [key, value] of this.variables) {
+			if (isGeneralPurposeRegister(key)) {
+				generalRegisters.push(value);
+			}
+		}
+		return generalRegisters;
+	}
+
+	public getSpecialRegisters(): RuntimeVariable[] {
+		// return special type registers from this.variables
+		let specialRegisters: RuntimeVariable[] = [];
+		for (let [key, value] of this.variables) {
+			if (isSpecialRegister(key)) {
+				specialRegisters.push(value);
+			}
+		}
+		return specialRegisters;
+	}
+
+	public getSystemRegisters(): RuntimeVariable[] {
+		// return system type registers from this.variables
+		let systemRegisters: RuntimeVariable[] = [];
+		for (let [key, value] of this.variables) {
+			if (isSystemRegister(key)) {
+				systemRegisters.push(value);
+			}
+		}
+		return systemRegisters;
+	}
+
+	public getByteRegisters(): RuntimeVariable[] {
+		// return byte type registers from this.variables
+		let byteRegisters: RuntimeVariable[] = [];
+		for (let [key, value] of this.variables) {
+			if (isByteRegister(key)) {
+				byteRegisters.push(value);
+			}
+		}
+		return byteRegisters;
+	}
+
+	public getHalfRegisters(): RuntimeVariable[] {
+		// return half type registers from this.variables
+		let halfRegisters: RuntimeVariable[] = [];
+		for (let [key, value] of this.variables) {
+			if (isHalfRegister(key)) {
+				halfRegisters.push(value);
+			}
+		}
+		return halfRegisters;
+	}
+
+	public getSingleRegisters(): RuntimeVariable[] {
+		// return single type registers from this.variables
+		let singleRegisters: RuntimeVariable[] = [];
+		for (let [key, value] of this.variables) {
+			if (isSingleRegister(key)) {
+				singleRegisters.push(value);
+			}
+		}
+		return singleRegisters;
+	}
+
+	public getDoubleRegisters(): RuntimeVariable[] {
+		// return double type registers from this.variables
+		let doubleRegisters: RuntimeVariable[] = [];
+		for (let [key, value] of this.variables) {
+			if (isDoubleRegister(key)) {
+				doubleRegisters.push(value);
+			}
+		}
+		return doubleRegisters;
+	}
+
+	public getQuadRegisters(): RuntimeVariable[] {
+		// return quad type registers from this.variables
+		let quadRegisters: RuntimeVariable[] = [];
+		for (let [key, value] of this.variables) {
+			if (isQuadRegister(key)) {
+				quadRegisters.push(value);
+			}
+		}
+		return quadRegisters;
+	}
+
+	public getVectorRegisters(): RuntimeVariable[] {
+		// return vector type registers from this.variables
+		let vectorRegisters: RuntimeVariable[] = [];
+		for (let [key, value] of this.variables) {
+			if (isVectorRegister(key)) {
+				vectorRegisters.push(value);
+			}
+		}
+		return vectorRegisters;
+	}
+
+	public getWorkRegisters(): RuntimeVariable[] {
+		// return work type registers from this.variables
+		let workRegisters: RuntimeVariable[] = [];
+		for (let [key, value] of this.variables) {
+			if (isWorkRegister(key)) {
+				workRegisters.push(value);
+			}
+		}
+		return workRegisters;
+	}
+
+	public getInterrupt(): RuntimeVariable {
+		return this.variables.get("Interrupt")!;
+	}
+
+	public getMemory(): RuntimeVariable {
+		return this.variables.get("Memory")!;
+	}
+
+	public getInstruction(): RuntimeVariable {
+		return this.variables.get("Instruction")!;
+	}
+
 
 	/**
-	 * Retrieves a local variable by name.
+	 * Retrieves a register by name.
 	 * @param name - The name of the variable to retrieve.
 	 * @returns The RuntimeVariable object representing the local variable, or undefined if the variable does not exist.
 	 */
-	public getLocalVariable(name: string): RuntimeVariable | undefined {
+	public getRegister(name: string): RuntimeVariable | undefined {
 		return this.variables.get(name);
 	}
 
@@ -689,17 +828,16 @@ export class QilingDebugger extends EventEmitter {
 		this.variables.clear();
 
 		let interrupt = response["interrupt"];
-		let variable = new RuntimeVariable("interrupt", interrupt);
-		this.variables.set("interrupt", variable);
+		let variable = new RuntimeVariable("Interrupt", interrupt);
+		this.variables.set("Interrupt", variable);
 
 		let memory = response["insn"]["memory"];
-		variable = new RuntimeVariable("memory", memory);
-		this.variables.set("memory", variable);
+		variable = new RuntimeVariable("Memory", memory);
+		this.variables.set("Memory", variable);
 
 		let instruction = response["insn"]["instruction"];
-		variable = new RuntimeVariable("instruction", instruction);
-		this.variables.set("instruction", variable);
-
+		variable = new RuntimeVariable("Instruction", instruction);
+		this.variables.set("Instruction", variable);
 
 		for (let reg in response["regs"]) {
 			variable = new RuntimeVariable(reg, response["regs"][reg]);
@@ -708,14 +846,14 @@ export class QilingDebugger extends EventEmitter {
 	}
 
 	/**
-	 * "execute a line" of the readme markdown.
+	 * execute a line and check for breakpoints
 	 * Returns true if execution sent out a stopped event and needs to stop.
 	 */
 	private async executeLine(ln: number): Promise<boolean> {
 		//execute instruction on server
 		await this.getCont();
-		if (this.instructionBreakpoints.has(ln)) {
-			this.sendEvent('stopOnInstructionBreakpoint');
+		if (this.breakPoints.get(this._sourceFile)?.find(bp => bp.line === ln)) {
+			this.sendEvent('stopOnBreakpoint');
 			return true;
 		}
 		return false;
@@ -743,10 +881,6 @@ export class QilingDebugger extends EventEmitter {
 					if (srcLine.length === 0 || srcLine.trim().indexOf('/*') === 0 || srcLine.trim().indexOf('//')=== 0){
 						bp.line++;
 					}
-					// TODO: handle loops and jumps
-					// if (srcLine.indexOf('jmp') === 0) {
-					// 	bp.line--;
-					// }
 					bp.verified = true;
 					this.sendEvent('breakpointValidated', bp);
 				}
@@ -776,5 +910,9 @@ export class QilingDebugger extends EventEmitter {
 		} else {
 			return path.replace(/\\/g, '/'); // Replace backslashes with forward slashes
 		}
+	}
+
+	public stop() {
+		this.qdbProcess.kill('SIGKILL');
 	}
 }

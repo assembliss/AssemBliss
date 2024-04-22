@@ -60,7 +60,23 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 
     // NOTE: This has been repurposed from variables to registers, heap, and stack
     /** Handles for different types of variables in the debugger. */
-	private _variableHandles = new DebugAdapter.Handles<'heap' | 'stack' | RuntimeVariable>();
+	private _variableHandles = new DebugAdapter.Handles<
+		'General Purpose Register' | 
+		'Special Registers' | 
+		'System Registers' |
+		'Byte Registers' |
+		'Halfword Registers' |
+		'Singleword Registers' |
+		'Doubleword Registers' |
+		'Quadword Registers' |
+		'Vector Registers' |
+		'Work Registers' |
+		'Interrupt' |
+		'Memory' |
+		'Instruction'
+	>();
+
+	// NOTE: This has been repurposed from variables to registers, heap, and stack
 	// private _variableHandles = new DebugAdapter.Handles<'locals' | 'globals' | RuntimeVariable>();
 
 
@@ -82,7 +98,7 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 	// private _cancelledProgressId: string | undefined = undefined;
 	// private _isProgressCancellable = true;
 
-	private _valuesInHex = false;
+	// private _valuesInHex = false;
 // 	private _useInvalidatedEvent = false;
 
 	private _addressesInHex = true;
@@ -113,9 +129,9 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 		this._runtime.on('stopOnDataBreakpoint', () => {
 			this.sendEvent(new DebugAdapter.StoppedEvent('data breakpoint', AssemblissDebugSession.threadID));
 		});
-		this._runtime.on('stopOnInstructionBreakpoint', () => {
-			this.sendEvent(new DebugAdapter.StoppedEvent('instruction breakpoint', AssemblissDebugSession.threadID));
-		});
+		// this._runtime.on('stopOnInstructionBreakpoint', () => {
+		// 	this.sendEvent(new DebugAdapter.StoppedEvent('instruction breakpoint', AssemblissDebugSession.threadID));
+		// });
 // 		this._runtime.on('stopOnException', (exception) => {
 // 			if (exception) {
 // 				this.sendEvent(new StoppedEvent(`exception(${exception})`, MockDebugSession.threadID));
@@ -231,7 +247,7 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 		response.body.supportsSteppingGranularity = false;
 
 		//make VS Code support instruction breakpoints 
-		response.body.supportsInstructionBreakpoints = true;
+		response.body.supportsInstructionBreakpoints = false;
 
 // 		// make VS Code able to read and write variable memory
 		response.body.supportsReadMemoryRequest = true;
@@ -270,12 +286,12 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 	 */
 	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments, request?: DebugProtocol.Request): void {
 		console.log(`disconnectRequest suspend: ${args.suspendDebuggee}, terminate: ${args.terminateDebuggee}`);
-		
+		this._runtime.stop();
 		// The following is a potential way I want to handle disconnecting from the debugger
 		// if (args.terminateDebuggee) {
 		// 	this._runtime.stop();
 		// } else {
-		// 	this._runtime.disconnect();
+		// 	// this._runtime.disconnect();
 		// }
 	}
 
@@ -486,9 +502,22 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 
 		response.body = {
 			scopes: [
-				// new DebugAdapter.Scope("Registers", this._variableHandles.create(RuntimeVariable), false), FIXME: Implement properly to show registers
-				new DebugAdapter.Scope("Stack", this._variableHandles.create('stack'), true),
-				new DebugAdapter.Scope("Heap", this._variableHandles.create('heap'), true),
+				// new DebugAdapter.Scope("Registers", this._variableHandles.create(RuntimeVariable), false),
+				// new DebugAdapter.Scope("Stack", this._variableHandles.create('stack'), true),
+				// new DebugAdapter.Scope("Heap", this._variableHandles.create('heap'), true),
+				new DebugAdapter.Scope("General Purpose Registers", this._variableHandles.create('General Purpose Register'), true),
+				new DebugAdapter.Scope("Special Registers", this._variableHandles.create('Special Registers'), false),
+				new DebugAdapter.Scope("System Registers", this._variableHandles.create('System Registers'), false),
+				new DebugAdapter.Scope("Byte Registers", this._variableHandles.create('Byte Registers'), true),
+				new DebugAdapter.Scope("Halfword Registers", this._variableHandles.create('Halfword Registers'), true),
+				new DebugAdapter.Scope("Singleword Registers", this._variableHandles.create('Singleword Registers'), true),
+				new DebugAdapter.Scope("Doubleword Registers", this._variableHandles.create('Doubleword Registers'), true),
+				new DebugAdapter.Scope("Quadword Registers", this._variableHandles.create('Quadword Registers'), true),
+				new DebugAdapter.Scope("Vector Registers", this._variableHandles.create('Vector Registers'), true),
+				new DebugAdapter.Scope("Work Registers", this._variableHandles.create('Work Registers'), true),
+				new DebugAdapter.Scope("Interrupt", this._variableHandles.create('Interrupt'), false),
+				new DebugAdapter.Scope("Memory", this._variableHandles.create('Memory'), false),
+				new DebugAdapter.Scope("Instruction", this._variableHandles.create('Instruction'), false)
 			]
 		};
 		this.sendResponse(response);
@@ -535,7 +564,7 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 		// 		unreadableBytes: count
 		// 	};
 		// }
-		response.body = { //TODO: Implement properly, handle registers, stack, and heap
+		response.body = { //TODO: Implement properly, handle registers
 			address: offset.toString(),
 			data: '',
 			unreadableBytes: count
@@ -554,12 +583,41 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 	 */
 	protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments, request?: DebugProtocol.Request): Promise<void> {
 //TODO: Implement properly, handle registers, stack, and heap
-		// let vs: RuntimeVariable[] = [];
+		let vs: RuntimeVariable[] = [];
 
-		// const v = this._variableHandles.get(args.variablesReference);
-		// if (v === 'locals') {
-		// 	vs = this._runtime.getLocalVariables();
-		// } else if (v === 'globals') {
+		const v = this._variableHandles.get(args.variablesReference);
+		if (v === 'General Purpose Register') {
+			// vs = this._runtime.getLocalVariables();
+			vs = this._runtime.getGeneralRegisters();
+		} else if (v === 'Special Registers') {
+			vs = this._runtime.getSpecialRegisters();
+		} else if (v === 'System Registers') {
+			vs = this._runtime.getSystemRegisters();
+		}
+		else if (v === 'Byte Registers') {
+			vs = this._runtime.getByteRegisters();
+		} else if (v === 'Halfword Registers') {
+			vs = this._runtime.getHalfRegisters();
+		} else if (v === 'Singleword Registers') {
+			vs = this._runtime.getSingleRegisters();
+		} else if (v === 'Doubleword Registers') {
+			vs = this._runtime.getDoubleRegisters();
+		} else if (v === 'Quadword Registers') {
+			vs = this._runtime.getQuadRegisters();
+		} else if (v === 'Vector Registers') {
+			vs = this._runtime.getVectorRegisters();
+		} else if (v === 'Work Registers') {
+			vs = this._runtime.getWorkRegisters();
+		} else if (v === 'Interrupt') {
+			vs = [this._runtime.getInterrupt()];
+		} else if (v === 'Memory') {
+			vs = [this._runtime.getMemory()];
+		} else if (v === 'Instruction') {
+			vs = [this._runtime.getInstruction()];
+		} else {
+			console.log('Invalid variable reference'); //FIXME: handle this
+		}
+
 		// 	if (request) {
 		// 		this._cancellationTokens.set(request.seq, false);
 		// 		vs = await this._runtime.getGlobalVariables(() => !!this._cancellationTokens.get(request.seq));
@@ -571,10 +629,10 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 		// 	vs = v.value;
 		// }
 
-		// response.body = {
-		// 	variables: vs.map(v => this.convertFromRuntime(v))
-		// };
-		// this.sendResponse(response);
+		response.body = {
+			variables: vs.map(v => this.convertFromRuntime(v))
+		};
+		this.sendResponse(response);
 	}
 
 // 	protected setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): void {
@@ -705,9 +763,9 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 
 			default:
 				if (args.expression.startsWith('$')) {
-					rv = this._runtime.getLocalVariable(args.expression.substr(1));
+					rv = this._runtime.getRegister(args.expression.substr(1));
 				} else {
-					rv = new RuntimeVariable('eval', this.convertToRuntime(args.expression));
+					rv = new RuntimeVariable('eval', this.convertToRuntime(args.expression)); //FIXME: Implement this
 				}
 				break;
 		}
@@ -938,31 +996,31 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 // 		this.sendResponse(response);
 // 	}
 
-	/**
-	 * Sets the instruction breakpoints based on the provided arguments.
-	 * 
-	 * @param response - The response object to send back to the debugger.
-	 * @param args - The arguments containing the breakpoints to set.
-	 */
-	protected setInstructionBreakpointsRequest(response: DebugProtocol.SetInstructionBreakpointsResponse, args: DebugProtocol.SetInstructionBreakpointsArguments) {
+	// /**
+	//  * Sets the instruction breakpoints based on the provided arguments.
+	//  * 
+	//  * @param response - The response object to send back to the debugger.
+	//  * @param args - The arguments containing the breakpoints to set.
+	//  */
+	// protected setInstructionBreakpointsRequest(response: DebugProtocol.SetInstructionBreakpointsResponse, args: DebugProtocol.SetInstructionBreakpointsArguments) {
 
-		// clear all instruction breakpoints
-		this._runtime.clearInstructionBreakpoints();
+	// 	// clear all instruction breakpoints
+	// 	this._runtime.clearInstructionBreakpoints();
 
-		// set instruction breakpoints
-		const breakpoints = args.breakpoints.map(ibp => {
-			const address = parseInt(ibp.instructionReference.slice(3));
-			const offset = ibp.offset || 0;
-			return <DebugProtocol.Breakpoint>{
-				verified: this._runtime.setInstructionBreakpoint(address + offset)
-			};
-		});
+	// 	// set instruction breakpoints
+	// 	const breakpoints = args.breakpoints.map(ibp => {
+	// 		const address = parseInt(ibp.instructionReference.slice(3));
+	// 		const offset = ibp.offset || 0;
+	// 		return <DebugProtocol.Breakpoint>{
+	// 			verified: this._runtime.setInstructionBreakpoint(address + offset)
+	// 		};
+	// 	});
 
-		response.body = {
-			breakpoints: breakpoints
-		};
-		this.sendResponse(response);
-	}
+	// 	response.body = {
+	// 		breakpoints: breakpoints
+	// 	};
+	// 	this.sendResponse(response);
+	// }
 
 	// protected customRequest(command: string, response: DebugProtocol.Response, args: any) {
 	// 	if (command === 'toggleFormatting') {
@@ -1077,14 +1135,14 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 		return 'mem' + (this._addressesInHex ? '0x' + x.toString(16).padStart(8, '0') : x.toString(10));
 	}
 
-	/**
-	 * Formats a number as either hexadecimal or decimal based on the `_valuesInHex` flag.
-	 * @param x - The number to be formatted.
-	 * @returns The formatted number.
-	 */
-	private formatNumber(x: number) {
-		return this._valuesInHex ? '0x' + x.toString(16) : x.toString(10);
-	}
+	// /**
+	//  * Formats a number as either hexadecimal or decimal based on the `_valuesInHex` flag.
+	//  * @param x - The number to be formatted.
+	//  * @returns The formatted number.
+	//  */
+	// private formatNumber(x: number) {
+	// 	return this._valuesInHex ? '0x' + x.toString(16) : x.toString(10);
+	// }
 
 	/**
 	 * Creates a DebugAdapter.Source object based on the provided file path.
