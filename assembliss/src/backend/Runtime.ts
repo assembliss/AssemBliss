@@ -286,10 +286,12 @@ export class QilingDebugger extends EventEmitter {
 
 		if (debug) {
 			timeout(1000); // wait for the server to start
-			await this.getRun(); // start the program/
 			await this.verifyBreakpoints(this._sourceFile);
 			if(!stopOnEntry) {
 				await this.continue(false);
+			} else{
+				await this.getRun(); // start the program/
+				this.sendEvent('stopOnEntry'); // send the event to the frontend
 			}
 		} else {
 			this.getRunAll();
@@ -851,11 +853,14 @@ export class QilingDebugger extends EventEmitter {
 	 */
 	private async executeLine(ln: number): Promise<boolean> {
 		//execute instruction on server
-		await this.getCont();
-		if (this.breakPoints.get(this._sourceFile)?.find(bp => bp.line === ln)) {
+		if(this.currentLine === 0) {
+			this.getRun();
+		}
+		if (this.breakPoints.get(this._sourceFile)?.find(bp => bp.line === ln)) { 
 			this.sendEvent('stopOnBreakpoint');
 			return true;
 		}
+		await this.getCont();
 		return false;
 	}
 

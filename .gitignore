@@ -68,3 +68,5 @@ assembliss/rootfs/*
 
 #ignore transpiled files
 assembliss/out/
+assembliss/insnINFO.txt
+assembliss/regsINFO.txt
