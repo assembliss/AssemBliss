@@ -451,36 +451,28 @@ export class QilingDebugger extends EventEmitter {
 	 */
 	public stack(startFrame: number, endFrame: number): IRuntimeStack {
 
-		// const line = this.getLine();
-		// const words = this.getWords(this.currentLine, line);
-		// words.push({ name: 'BOTTOM', line: -1, index: -1 });	// add a sentinel so that the stack is never empty...
+		const line = this.getLine();
+		const words = this.getWords(this.currentLine, line);
+		words.push({ text: 'BOTTOM', line: -1 });	// add a sentinel so that the stack is never empty...
 
-		// // if the line contains the word 'disassembly' we support to "disassemble" the line by adding an 'instruction' property to the stackframe
-		// const instruction = line.indexOf('disassembly') >= 0 ? this.instruction : undefined;
+		const frames: IRuntimeStackFrame[] = [];
+		// every word of the current line becomes a stack frame.
+		for (let i = startFrame; i < Math.min(endFrame, words.length); i++) {
 
-		// const column = typeof this.currentColumn === 'number' ? this.currentColumn : undefined;
+			const stackFrame: IRuntimeStackFrame = {
+				index: i,
+				name: `${words[i].text}(${i})`,	// use a word of the line as the stackframe name
+				file: this._sourceFile,
+				line: this.currentLine,
+			};
 
-		// const frames: IRuntimeStackFrame[] = [];
-		// // every word of the current line becomes a stack frame.
-		// for (let i = startFrame; i < Math.min(endFrame, words.length); i++) {
+			frames.push(stackFrame);
+		}
 
-		// 	const stackFrame: IRuntimeStackFrame = {
-		// 		index: i,
-		// 		name: `${words[i].name}(${i})`,	// use a word of the line as the stackframe name
-		// 		file: this._sourceFile,
-		// 		line: this.currentLine,
-		// 		column: column, // words[i].index
-		// 		instruction: instruction ? instruction + i : 0
-		// 	};
-
-		// 	frames.push(stackFrame);
-		// }
-
-		// return {
-		// 	frames: frames,
-		// 	count: words.length
-		// };
-		return { count: 0, frames: [] }; // TODO: implement this
+		return {
+			frames: frames,
+			count: words.length
+		};
 	}
 
 	
@@ -775,16 +767,16 @@ export class QilingDebugger extends EventEmitter {
 	//  * @param line - The line of text to extract words from.
 	//  * @returns An array of Word objects containing the name, line number, and index of each word.
 	//  */
-	// private getWords(l: number, line: string): Word[] {
-	// 	// break line into words
-	// 	const WORD_REGEXP = /[a-z]+/ig; // This is a simple regex that matches any sequence of lowercase letters.
-	// 	const words: Word[] = []; // This array will store the words found in the line.
-	// 	let match: RegExpExecArray | null; // This variable will store the result of the regex match.
-	// 	while (match = WORD_REGEXP.exec(line)) { // This loop will continue until there are no more matches.
-	// 		words.push({ name: match[0], line: l, index: match.index }); // This line adds the word to the words array.
-	// 	}
-	// 	return words;
-	// }
+	private getWords(l: number, line: string): Word[] {
+		// break line into words
+		const WORD_REGEXP = /[a-z]+/ig; // This is a simple regex that matches any sequence of lowercase letters.
+		const words: Word[] = []; // This array will store the words found in the line.
+		let match: RegExpExecArray | null; // This variable will store the result of the regex match.
+		while (match = WORD_REGEXP.exec(line)) { // This loop will continue until there are no more matches.
+			words.push({ text:line, line: l }); // This line adds the word to the words array.
+		}
+		return words;
+	}
 
 	/**
 	 * Loads the source file and initializes its contents.
