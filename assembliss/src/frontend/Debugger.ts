@@ -60,7 +60,6 @@ export function initialize(context: vscode.ExtensionContext) {
 
 	// register a dynamic configuration provider for 'qdb' debug type
 	context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('qdb', {
-		// TODO: figure out how to get this to appear in Assembliss instead of undefined
 		provideDebugConfigurations(folder: WorkspaceFolder | undefined): ProviderResult<DebugConfiguration[]> { 
 			const config = [
 				{
@@ -88,9 +87,9 @@ export function initialize(context: vscode.ExtensionContext) {
 	}
 	console.log('Added debug adapter descriptor factory for qdb debug type.')
 
-	utils.overrideDebugHover(context); // This is used to override the default hover behavior in the debugger. This may be a stretch goal.
+	// utils.overrideDebugHover(context); // This is used to override the default hover behavior in the debugger. This is a stretch goal.
 
-	utils.overrideInlineValues(context); // This is used to override the default inline values behavior in the debugger. This may be a stretch goal.
+	// utils.overrideInlineValues(context); // This is used to override the default inline values behavior in the debugger. This is a stretch goal.
 }
 
 /**
@@ -166,6 +165,5 @@ class DebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
 	createDebugAdapterDescriptor(_session: vscode.DebugSession): ProviderResult<vscode.DebugAdapterDescriptor> {
 		let assembliss = new AssemblissDebugSession(workspaceFileAccessor);
 		return new vscode.DebugAdapterInlineImplementation(assembliss);
-		// return null; // TODO: implement DebugSession
 	}
 }
