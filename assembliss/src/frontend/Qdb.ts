@@ -112,7 +112,7 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 
 		// this debugger uses one-based lines and columns
 		this.setDebuggerLinesStartAt1(true);
-		this.setDebuggerColumnsStartAt1(true);
+		// this.setDebuggerColumnsStartAt1(true);
 
 		this._runtime = new QilingDebugger(fileAccessor);
 
@@ -126,9 +126,9 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 		this._runtime.on('stopOnBreakpoint', () => {
 			this.sendEvent(new DebugAdapter.StoppedEvent('breakpoint', AssemblissDebugSession.threadID));
 		});
-		this._runtime.on('stopOnDataBreakpoint', () => {
-			this.sendEvent(new DebugAdapter.StoppedEvent('data breakpoint', AssemblissDebugSession.threadID));
-		});
+		// this._runtime.on('stopOnDataBreakpoint', () => {
+		// 	this.sendEvent(new DebugAdapter.StoppedEvent('data breakpoint', AssemblissDebugSession.threadID));
+		// });
 		// this._runtime.on('stopOnInstructionBreakpoint', () => {
 		// 	this.sendEvent(new DebugAdapter.StoppedEvent('instruction breakpoint', AssemblissDebugSession.threadID));
 		// });

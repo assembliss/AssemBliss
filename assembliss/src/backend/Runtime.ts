@@ -309,7 +309,7 @@ export class QilingDebugger extends EventEmitter {
 	// }
 
 	private async getRun(): Promise<void> {
-		await timeout(1000); // wait for the server to start
+		// await timeout(1000); // wait for the server to start
 		const response = await fetch(`http://${this.HOST}:${this.PORT}/?get_run=true`);
 		const data = await response.json();
 		this.parseResponse(data);
