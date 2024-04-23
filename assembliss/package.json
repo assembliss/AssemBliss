@@ -73,10 +73,6 @@
         "title": "Assembliss: Debug Editor Contents"
       },
       {
-        "command": "assembliss.toggleFormatting",
-        "title": "Assembliss: Toggle Formatting"
-      },
-      {
         "command": "assembliss.AS",
         "title": "Assembliss: AS"
       },
@@ -140,19 +136,19 @@
           {
             "type": "qdb",
             "request": "launch",
-            "name": "Assembliss: Ask for file name (Initial Config)",
+            "name": "Assembliss: Debug",
             "target": "${workspaceFolder}/${command:AskForProgramName}",
-            "stopOnEntry": true
+            "stopOnEntry": false
           }
         ],
         "configurationSnippets": [
           {
-            "label": "Assembliss: Launch",
-            "description": "A new configuration for debugging a user selected assembly file.",
+            "label": "Assembliss: Stop on Entry",
+            "description": "Stop at the entry point of the program",
             "body": {
               "type": "qdb",
               "request": "launch",
-              "name": "Assembliss: Ask for program name",
+              "name": "Assembliss: Stop on Entry",
               "target": "^\"\\${workspaceFolder}/\\${command:AskForProgramName}\"",
               "stopOnEntry": true
             }

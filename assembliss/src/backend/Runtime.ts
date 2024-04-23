@@ -294,7 +294,10 @@ export class QilingDebugger extends EventEmitter {
 				this.sendEvent('stopOnEntry'); // send the event to the frontend
 			}
 		} else {
+			await timeout(1000); // wait for the server to start
 			this.getRunAll();
+			// this.stop();
+			this.sendEvent('end');
 		}
 
 	}
