@@ -69,3 +69,8 @@ assembliss/rootfs/*
 #ignore transpiled files
 assembliss/insnINFO.txt
 assembliss/regsINFO.txt
+
+#ignore sample workspace files
+assembliss/sampleWorkspace/helloWorld
+assembliss/sampleWorkspace/helloWorld.obj
+assembliss/sampleWorkspace/.vscode/*
