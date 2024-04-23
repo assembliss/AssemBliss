@@ -261,9 +261,9 @@ export class QilingDebugger extends EventEmitter {
 
 		let path = this.normalizePathAndCasing('src/backend/DebugServer/debugServer.py');
 		if (!program) 
-			return;
+			{return;}
 		let binary = program.split('.')[0]; // gets the binary name by removing the extension
-		this.qdbProcess = spawn('python3', [path, binary]); // load the program
+		this.qdbProcess = spawn('python3.11', [path, binary]); // load the program
 		this.qdbProcess.stdout.on('data', (data) => { // function for when there is standard output
 			// console.log(`stdout: ${data}`); // just display in console.
 			vscode.debug.activeDebugConsole.appendLine(data); // display in debug console
@@ -285,7 +285,7 @@ export class QilingDebugger extends EventEmitter {
 		
 
 		if (debug) {
-			timeout(1000); // wait for the server to start
+			await timeout(1000); // wait for the server to start
 			await this.verifyBreakpoints(this._sourceFile);
 			if(!stopOnEntry) {
 				await this.continue(false);
@@ -306,7 +306,7 @@ export class QilingDebugger extends EventEmitter {
 	// }
 
 	private async getRun(): Promise<void> {
-		timeout(1000); // wait for the server to start
+		await timeout(1000); // wait for the server to start
 		const response = await fetch(`http://${this.HOST}:${this.PORT}/?get_run=true`);
 		const data = await response.json();
 		this.parseResponse(data);
