@@ -67,6 +67,5 @@ assembliss/rootfs/*
 *.pyc
 
 #ignore transpiled files
-assembliss/out/
 assembliss/insnINFO.txt
 assembliss/regsINFO.txt
