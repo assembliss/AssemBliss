@@ -23,13 +23,8 @@ programPath = None
 
 #simple disassembler method to get program information
 def simple_diassembler(ql: Qiling, address: int, size: int, md: Cs) -> None:
-    # Reads the memory from the given address.
+    # Reads the memeory from the given address.
     buf = ql.mem.read(address, size)
-
-    with open(INSN_INFO_FILE_NAME, 'w') as f:
-        pass
-    with open(REGS_INFO_FILE_NAME, 'w') as f:
-        pass
 
     # Disassemble the memory part so we can remap it to what instruction happened.
     #Write register and instruction info for file to store on server
@@ -40,12 +35,12 @@ def simple_diassembler(ql: Qiling, address: int, size: int, md: Cs) -> None:
         for k in m:
             regs[k] = ql.arch.regs.read(k)
         #write instruction info to file for access by server
-        with open(INSN_INFO_FILE_NAME, 'a') as f:
-            f.write(f"{insn.address:#x}, {insn.mnemonic:s} {insn.op_str}\n")
+        with open(INSN_INFO_FILE_NAME, 'w') as f:
+            print(f"{insn.address:#x}, {insn.mnemonic:s} {insn.op_str}",
+                   file=f)
         #write register state to file for later access
-        with open(REGS_INFO_FILE_NAME, 'a') as f:
+        with open(REGS_INFO_FILE_NAME, 'w') as f:
             json.dump(regs, f)
-            f.write('\n')  # Add a newline to separate JSON objects
 
 #interupt reader prints interupt number and sets interupt number when qiling hooks to interupt
 def interRead(ql: Qiling, intno):
