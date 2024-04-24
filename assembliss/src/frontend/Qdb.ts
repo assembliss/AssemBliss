@@ -505,6 +505,8 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 				// new DebugAdapter.Scope("Registers", this._variableHandles.create(RuntimeVariable), false),
 				// new DebugAdapter.Scope("Stack", this._variableHandles.create('stack'), true),
 				// new DebugAdapter.Scope("Heap", this._variableHandles.create('heap'), true),
+				new DebugAdapter.Scope("Interrupt", this._variableHandles.create('Interrupt'), false),
+				new DebugAdapter.Scope("Memory", this._variableHandles.create('Memory'), false),
 				new DebugAdapter.Scope("General Purpose Registers", this._variableHandles.create('General Purpose Register'), true),
 				new DebugAdapter.Scope("Special Registers", this._variableHandles.create('Special Registers'), false),
 				new DebugAdapter.Scope("System Registers", this._variableHandles.create('System Registers'), false),
@@ -515,8 +517,6 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 				new DebugAdapter.Scope("Quadword Registers", this._variableHandles.create('Quadword Registers'), true),
 				new DebugAdapter.Scope("Vector Registers", this._variableHandles.create('Vector Registers'), true),
 				new DebugAdapter.Scope("Work Registers", this._variableHandles.create('Work Registers'), true),
-				new DebugAdapter.Scope("Interrupt", this._variableHandles.create('Interrupt'), false),
-				new DebugAdapter.Scope("Memory", this._variableHandles.create('Memory'), false),
 				new DebugAdapter.Scope("Instruction", this._variableHandles.create('Instruction'), false)
 			]
 		};
@@ -582,7 +582,6 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 	 * @returns A Promise that resolves when the variables have been retrieved and the response has been sent.
 	 */
 	protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments, request?: DebugProtocol.Request): Promise<void> {
-//TODO: Implement properly, handle registers, stack, and heap
 		let vs: RuntimeVariable[] = [];
 
 		const v = this._variableHandles.get(args.variablesReference);
@@ -1072,7 +1071,7 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 
 		let dapVariable: DebugProtocol.Variable = {
 			name: v.name,
-			value: '???',
+			value: v.value + '',
 			type: typeof v.value,
 			variablesReference: 0,
 			evaluateName: '$' + v.name
