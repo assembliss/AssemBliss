@@ -77,7 +77,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
                 try:
                     insn_info = f'{insnf.readline()[:-1]}'
                     
-                    line_number = subprocess.check_output(['aarch64-none-elf-addr2line', '-e', programPath, insn_info.split(",")[0]]).decode('utf-8').split(":")[-1].strip()
+                    line_number = subprocess.check_output(['addr2line', '-e', programPath, insn_info.split(",")[0]]).decode('utf-8').split(":")[-1].strip()
                     state['line_number'] = line_number
                     
                     insnMap = {}
