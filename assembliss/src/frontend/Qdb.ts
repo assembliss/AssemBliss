@@ -1071,7 +1071,7 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 
 		let dapVariable: DebugProtocol.Variable = {
 			name: v.name,
-			value: v.value + '',
+			value: v.value.toString(),
 			type: typeof v.value,
 			variablesReference: 0,
 			evaluateName: '$' + v.name

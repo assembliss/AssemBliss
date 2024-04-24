@@ -295,7 +295,7 @@ export class QilingDebugger extends EventEmitter {
 			}
 		} else {
 			await timeout(1000); // wait for the server to start
-			this.getRunAll();
+			await this.getRunAll();
 			// this.stop();
 			this.sendEvent('end');
 		}
@@ -358,8 +358,8 @@ export class QilingDebugger extends EventEmitter {
 	 * @param instruction - Indicates whether to step by instruction or by line. This is irrelevant for assembly code because each line is an instruction.
 	 * @param reverse - Indicates whether to step in reverse or forward direction. (Reverse execution is not supported)
 	 */
-	public step(instruction: boolean, reverse: boolean) {
-		this.getCont();
+	public async step(instruction: boolean, reverse: boolean) {
+		await this.getCont();
 		this.sendEvent('stopOnStep'); // this sends the event to the frontend
 		
 	}
@@ -757,7 +757,7 @@ export class QilingDebugger extends EventEmitter {
 	 * @returns The content of the specified line.
 	 */
 	private getLine(line?: number): string {
-		return this.sourceLines[line === undefined ? this.currentLine : line].trim();
+		return this.sourceLines[line === undefined ? this.currentLine - 1 : line - 1].trim();
 	}
 
 	// /**
@@ -801,8 +801,7 @@ export class QilingDebugger extends EventEmitter {
 	 * @param memory - The memory to initialize the contents from.
 	 */
 	private initializeContents(memory: Uint8Array) {
-
-		this.sourceLines = new TextDecoder().decode(memory).split(/\r?\n/);
+		this.sourceLines = new TextDecoder().decode(memory).trimEnd().split(/\r?\n/);
 
 		this.instructions = [];
 
@@ -816,6 +815,11 @@ export class QilingDebugger extends EventEmitter {
 	 * @param response - The response to parse in json format.
 	 */
 	private parseResponse(response: JSON) {
+		if (this.currentLine >= this.sourceLines.length){
+			//handle exit
+			this.sendEvent('end');
+		}
+		
 		if (response["line_number"] !== "?") { // line number is ? when the first instruction has not been executed yet
 			//parse int response["line_number"]
 			this.currentLine = parseInt(response["line_number"]);
@@ -849,13 +853,14 @@ export class QilingDebugger extends EventEmitter {
 	private async executeLine(ln: number): Promise<boolean> {
 		//execute instruction on server
 		if(this.currentLine === 0) {
-			this.getRun();
+			await this.getRun();
+		} else {
+			await this.getCont();
 		}
 		if (this.breakPoints.get(this._sourceFile)?.find(bp => bp.line === ln)) { 
 			this.sendEvent('stopOnBreakpoint');
 			return true;
 		}
-		await this.getCont();
 		return false;
 	}
 
