@@ -339,15 +339,10 @@ export class QilingDebugger extends EventEmitter {
 	 * @param reverse - If true continue execution in reverse. (Reverse execution is not supported)
 	 */
 	public async continue(reverse: boolean) {
-
-		while (await !this.executeLine(this.currentLine)) { // execute the current line and check if it needs to stop
-			// if (this.updateCurrentLine(reverse)) {
-			// 	break;
-			// }
-			// if (this.findNextStatement(reverse)) {
-			// 	break;
-			// }
-		}
+		let execution = false;
+		do {
+			execution = await this.executeLine(this.currentLine);
+		} while (!execution);
 		return; 
 	}
 

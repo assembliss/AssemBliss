@@ -67,6 +67,10 @@ assembliss/rootfs/*
 *.pyc
 
 #ignore transpiled files
-assembliss/out/
 assembliss/insnINFO.txt
 assembliss/regsINFO.txt
+
+#ignore sample workspace files
+assembliss/sampleWorkspace/helloWorld
+assembliss/sampleWorkspace/helloWorld.obj
+assembliss/sampleWorkspace/.vscode/*
