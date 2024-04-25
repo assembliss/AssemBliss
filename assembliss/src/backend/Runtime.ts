@@ -224,9 +224,14 @@ export class QilingDebugger extends EventEmitter {
 	
 	// This is the next line that will be 'executed'
 	private _currentLine = 0;
+	private lastLine = -1;
+
 	private get currentLine() {
 		return this._currentLine;
 	}
+
+	private _onBreakpoint = false;
+
 	private set currentLine(x) {
 		this._currentLine = x;
 		// this.instruction = this.starts[x];
@@ -501,7 +506,6 @@ export class QilingDebugger extends EventEmitter {
 		await this.verifyBreakpoints(path);
 
 		return bp;
-		return { id: 0, line, verified: false };
 	}
 
 	/*
@@ -766,8 +770,8 @@ export class QilingDebugger extends EventEmitter {
 		// break line into words
 		const WORD_REGEXP = /[a-z]+/ig; // This is a simple regex that matches any sequence of lowercase letters.
 		const words: Word[] = []; // This array will store the words found in the line.
-		let match: RegExpExecArray | null; // This variable will store the result of the regex match.
-		while (match = WORD_REGEXP.exec(line)) { // This loop will continue until there are no more matches.
+		// let match: RegExpExecArray | null; // This variable will store the result of the regex match.
+		while (WORD_REGEXP.exec(line)) { // This loop will continue until there are no more matches.
 			words.push({ text:line, line: l }); // This line adds the word to the words array.
 		}
 		return words;
@@ -817,7 +821,11 @@ export class QilingDebugger extends EventEmitter {
 		
 		if (response["line_number"] !== "?") { // line number is ? when the first instruction has not been executed yet
 			//parse int response["line_number"]
+			this.lastLine = this.currentLine;
 			this.currentLine = parseInt(response["line_number"]);
+		}
+		if(this.lastLine === this.currentLine) {
+			this.sendEvent('end');
 		}
 
 		//Clear this.variables and update it with the new values
@@ -847,12 +855,16 @@ export class QilingDebugger extends EventEmitter {
 	 */
 	private async executeLine(ln: number): Promise<boolean> {
 		//execute instruction on server
-		if(this.currentLine === 0) {
+		if(ln === 0) {
 			await this.getRun();
 		} else {
 			await this.getCont();
 		}
-		if (this.breakPoints.get(this._sourceFile)?.find(bp => bp.line === ln)) { 
+		if (this.currentLine >= this.sourceLines.length || this.currentLine === this.lastLine) {
+			this.sendEvent('end');
+			return true;
+		}
+		if (this.breakPoints.get(this._sourceFile)?.find(bp => bp.line === this.currentLine)) { 
 			this.sendEvent('stopOnBreakpoint');
 			return true;
 		}
@@ -872,7 +884,7 @@ export class QilingDebugger extends EventEmitter {
 			await this.loadSource(path);
 			bps.forEach(bp => {
 				if (!bp.verified && bp.line < this.sourceLines.length) {
-					const srcLine = this.getLine(bp.line);
+					const srcLine = this.getLine(bp.line - 1);
 
 					// NOTE: since qiling does not perserve line numbers, we have to  manually match the line number to the source line
 					// This makes it difficult to  handle breakpoints on empty lines or lines with comments or other non-executable code

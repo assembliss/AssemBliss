@@ -131,6 +131,8 @@ class QilingDebugger extends events_1.EventEmitter {
         this.instructions = [];
         // This is the next line that will be 'executed'
         this._currentLine = 0;
+        this.lastLine = -1;
+        this._onBreakpoint = false;
         // public instruction = 0;
         // all instruction breakpoint addresses
         // private instructionBreakpoints = new Set<number>();
@@ -186,7 +188,7 @@ class QilingDebugger extends events_1.EventEmitter {
         }
         else {
             await timeout(1000); // wait for the server to start
-            this.getRunAll();
+            await this.getRunAll();
             // this.stop();
             this.sendEvent('end');
         }
@@ -236,8 +238,8 @@ class QilingDebugger extends events_1.EventEmitter {
      * @param instruction - Indicates whether to step by instruction or by line. This is irrelevant for assembly code because each line is an instruction.
      * @param reverse - Indicates whether to step in reverse or forward direction. (Reverse execution is not supported)
      */
-    step(instruction, reverse) {
-        this.getCont();
+    async step(instruction, reverse) {
+        await this.getCont();
         this.sendEvent('stopOnStep'); // this sends the event to the frontend
     }
     // private updateCurrentLine(reverse: boolean): boolean {
@@ -317,30 +319,24 @@ class QilingDebugger extends events_1.EventEmitter {
      * @returns An object representing the runtime stack.
      */
     stack(startFrame, endFrame) {
-        // const line = this.getLine();
-        // const words = this.getWords(this.currentLine, line);
-        // words.push({ name: 'BOTTOM', line: -1, index: -1 });	// add a sentinel so that the stack is never empty...
-        // // if the line contains the word 'disassembly' we support to "disassemble" the line by adding an 'instruction' property to the stackframe
-        // const instruction = line.indexOf('disassembly') >= 0 ? this.instruction : undefined;
-        // const column = typeof this.currentColumn === 'number' ? this.currentColumn : undefined;
-        // const frames: IRuntimeStackFrame[] = [];
-        // // every word of the current line becomes a stack frame.
-        // for (let i = startFrame; i < Math.min(endFrame, words.length); i++) {
-        // 	const stackFrame: IRuntimeStackFrame = {
-        // 		index: i,
-        // 		name: `${words[i].name}(${i})`,	// use a word of the line as the stackframe name
-        // 		file: this._sourceFile,
-        // 		line: this.currentLine,
-        // 		column: column, // words[i].index
-        // 		instruction: instruction ? instruction + i : 0
-        // 	};
-        // 	frames.push(stackFrame);
-        // }
-        // return {
-        // 	frames: frames,
-        // 	count: words.length
-        // };
-        return { count: 0, frames: [] }; // TODO: implement this
+        const line = this.getLine();
+        const words = this.getWords(this.currentLine, line);
+        words.push({ text: 'BOTTOM', line: -1 }); // add a sentinel so that the stack is never empty...
+        const frames = [];
+        // every word of the current line becomes a stack frame.
+        for (let i = startFrame; i < Math.min(endFrame, words.length); i++) {
+            const stackFrame = {
+                index: i,
+                name: `${words[i].text}(${i})`, // use a word of the line as the stackframe name
+                file: this._sourceFile,
+                line: this.currentLine,
+            };
+            frames.push(stackFrame);
+        }
+        return {
+            frames: frames,
+            count: words.length
+        };
     }
     /**
      * Retrieves the breakpoints for a given path and line number.
@@ -368,7 +364,6 @@ class QilingDebugger extends events_1.EventEmitter {
         bps.push(bp);
         await this.verifyBreakpoints(path);
         return bp;
-        return { id: 0, line, verified: false };
     }
     /*
      * Clear breakpoint in file with given line.
@@ -585,7 +580,7 @@ class QilingDebugger extends events_1.EventEmitter {
      * @returns The content of the specified line.
      */
     getLine(line) {
-        return this.sourceLines[line === undefined ? this.currentLine : line].trim();
+        return this.sourceLines[line === undefined ? this.currentLine - 1 : line - 1].trim();
     }
     // /**
     //  * Retrieves an array of words from a given line of text.
@@ -594,16 +589,16 @@ class QilingDebugger extends events_1.EventEmitter {
     //  * @param line - The line of text to extract words from.
     //  * @returns An array of Word objects containing the name, line number, and index of each word.
     //  */
-    // private getWords(l: number, line: string): Word[] {
-    // 	// break line into words
-    // 	const WORD_REGEXP = /[a-z]+/ig; // This is a simple regex that matches any sequence of lowercase letters.
-    // 	const words: Word[] = []; // This array will store the words found in the line.
-    // 	let match: RegExpExecArray | null; // This variable will store the result of the regex match.
-    // 	while (match = WORD_REGEXP.exec(line)) { // This loop will continue until there are no more matches.
-    // 		words.push({ name: match[0], line: l, index: match.index }); // This line adds the word to the words array.
-    // 	}
-    // 	return words;
-    // }
+    getWords(l, line) {
+        // break line into words
+        const WORD_REGEXP = /[a-z]+/ig; // This is a simple regex that matches any sequence of lowercase letters.
+        const words = []; // This array will store the words found in the line.
+        // let match: RegExpExecArray | null; // This variable will store the result of the regex match.
+        while (WORD_REGEXP.exec(line)) { // This loop will continue until there are no more matches.
+            words.push({ text: line, line: l }); // This line adds the word to the words array.
+        }
+        return words;
+    }
     /**
      * Loads the source file and initializes its contents.
      *
@@ -626,7 +621,7 @@ class QilingDebugger extends events_1.EventEmitter {
      * @param memory - The memory to initialize the contents from.
      */
     initializeContents(memory) {
-        this.sourceLines = new TextDecoder().decode(memory).split(/\r?\n/);
+        this.sourceLines = new TextDecoder().decode(memory).trimEnd().split(/\r?\n/);
         this.instructions = [];
         for (let l = 0; l < this.sourceLines.length; l++) {
             this.instructions.push({ line: l, text: this.sourceLines[l] });
@@ -637,9 +632,17 @@ class QilingDebugger extends events_1.EventEmitter {
      * @param response - The response to parse in json format.
      */
     parseResponse(response) {
+        if (this.currentLine >= this.sourceLines.length) {
+            //handle exit
+            this.sendEvent('end');
+        }
         if (response["line_number"] !== "?") { // line number is ? when the first instruction has not been executed yet
             //parse int response["line_number"]
+            this.lastLine = this.currentLine;
             this.currentLine = parseInt(response["line_number"]);
+        }
+        if (this.lastLine === this.currentLine) {
+            this.sendEvent('end');
         }
         //Clear this.variables and update it with the new values
         this.variables.clear();
@@ -663,30 +666,20 @@ class QilingDebugger extends events_1.EventEmitter {
      */
     async executeLine(ln) {
         //execute instruction on server
-        if (this.currentLine === 0) {
+        if (ln === 0) {
             await this.getRun();
-            return false;
         }
-        if (this.breakPoints.get(this._sourceFile)?.find(bp => bp.line === ln)) {
-            const breakpoints = this.breakPoints.get(this._sourceFile);
-            if (breakpoints) {
-                const bps = breakpoints.filter(bp => bp.line === ln); // filter breakpoints for the current line
-                if (bps.length > 0) {
-                    // send 'stopped' event
-                    this.sendEvent('stopOnBreakpoint');
-                    // the following shows the use of 'breakpoint' events to update properties of a breakpoint in the UI
-                    // if breakpoint is not yet verified, verify it now and send a 'breakpoint' update event
-                    if (!bps[0].verified) {
-                        bps[0].verified = true;
-                        this.sendEvent('breakpointValidated', bps[0]);
-                    }
-                    this.currentLine = ln;
-                    return true;
-                }
-            }
-            // return true;
+        else {
+            await this.getCont();
         }
-        await this.getCont();
+        if (this.currentLine >= this.sourceLines.length || this.currentLine === this.lastLine) {
+            this.sendEvent('end');
+            return true;
+        }
+        if (this.breakPoints.get(this._sourceFile)?.find(bp => bp.line === this.currentLine)) {
+            this.sendEvent('stopOnBreakpoint');
+            return true;
+        }
         return false;
     }
     /**
@@ -701,7 +694,7 @@ class QilingDebugger extends events_1.EventEmitter {
             await this.loadSource(path);
             bps.forEach(bp => {
                 if (!bp.verified && bp.line < this.sourceLines.length) {
-                    const srcLine = this.getLine(bp.line);
+                    const srcLine = this.getLine(bp.line - 1);
                     // NOTE: since qiling does not perserve line numbers, we have to  manually match the line number to the source line
                     // This makes it difficult to  handle breakpoints on empty lines or lines with comments or other non-executable code
                     // In the future, we may have a list of all 354 executable instructions a line must start with to be executable and set breakpoints on those lines
