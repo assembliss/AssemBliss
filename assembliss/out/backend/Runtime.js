@@ -157,9 +157,11 @@ class QilingDebugger extends events_1.EventEmitter {
         }
         let binary = program.split('.')[0]; // gets the binary name by removing the extension
         this.qdbProcess = (0, child_process_1.spawn)('python3.11', [path, binary]); // load the program
+        const out = vscode.window.createOutputChannel("Assembliss");
         this.qdbProcess.stdout.on('data', (data) => {
             // console.log(`stdout: ${data}`); // just display in console.
-            vscode.debug.activeDebugConsole.appendLine(data); // display in debug console
+            // vscode.debug.activeDebugConsole.appendLine(data); // display in debug console
+            out.appendLine(data.toString());
             // Note: The following is a failed implementation of getting a randomly generated port number from the output of the python script.
             // this.port = parseInt(data.toString().trim()); // get the port number from the output
             // console.log(`Port number: ${this.port}`);
