@@ -15,11 +15,6 @@ export interface IRuntimeBreakpoint {
 	verified: boolean;
 }
 
-// interface IRuntimeStepInTargets {
-// 	id: number;
-// 	label: string;
-// }
-
 interface IRuntimeStackFrame {
 	index: number;
 	name: string;
@@ -34,28 +29,14 @@ interface IRuntimeStack {
 	frames: IRuntimeStackFrame[];
 }
 
-// NOTE: This may not be necessary since we are debugging assembly code.
-/**
-//  * RuntimeDisassembledInstruction is a disassembled instruction.
-//  * E.g. a runtime could return:
-//  *  address: 0x1234,
-//  */
-// interface RuntimeDisassembledInstruction {
-// 	address: number;
-// 	instruction: string;
-// 	line?: number;
-// }
 
-// NOTE: This may not be necessary since we are debugging assembly code. Get RuntimeVariable class example from mock-debug.
-// Potentially replace variables with registers.
-// export type IRuntimeVariableType = number | boolean | string | RuntimeVariable[];
-// The following is a potential implementation of RuntimeVariable.
 // General Purpose Registers
 export type GeneralPurposeRegister = 
     | 'x0' | 'x1' | 'x2' | 'x3' | 'x4' | 'x5' | 'x6' | 'x7'
     | 'x8' | 'x9' | 'x10' | 'x11' | 'x12' | 'x13' | 'x14' | 'x15'
     | 'x16' | 'x17' | 'x18' | 'x19' | 'x20' | 'x21' | 'x22' | 'x23'
     | 'x24' | 'x25' | 'x26' | 'x27' | 'x28' | 'x29' | 'x30';
+
 export function isGeneralPurposeRegister(register: string): register is GeneralPurposeRegister {
 	return register.startsWith('x') && parseInt(register.slice(1)) >= 0 && parseInt(register.slice(1)) <= 30;
 }
@@ -146,16 +127,6 @@ export class RuntimeVariable {
 
 	constructor(public readonly name: string, private _value: IRuntimeVariableType) {}
 
-	// public setMemory(data: Uint8Array, offset = 0) {
-	// 	const memory = this.memory;
-	// 	if (!memory) {
-	// 		return;
-	// 	}
-
-	// 	memory.set(data, offset);
-	// 	this._memory = memory;
-	// 	this._value = new TextDecoder().decode(memory);
-	// }
 }
 
 /** A Word in this context is a sequence of characters that form a token in the source code.
@@ -167,11 +138,6 @@ interface Word {
 	line: number;
 	// index: number;
 }
-
-// interface Line {
-// 	line: number;
-// 	text: string;
-// }
 
 /**
  * Delays the execution for the specified number of milliseconds.
@@ -190,10 +156,8 @@ export function timeout(ms: number) {
  * and stops on lines for which a breakpoint has been registered. This functionality is the
  * core of the "debugging support".
  * Since the Runtime is completely independent from VS Code or the Debug Adapter Protocol,
- * it can be viewed as a simplified representation of a real "execution engine" (e.g. node.js)
- * or debugger (e.g. gdb).
- * When implementing your own debugger extension for VS Code, you probably don't need this
- * class because you can rely on some existing debugger or runtime.
+ * it can be viewed as part of the debugger itself. It is the component that records the machine 
+ * state from the python server and holds the breakpoints and line numbers.
 */
 export class QilingDebugger extends EventEmitter {
 	// NOTE: This class originated from MockRuntime in mockRuntime.ts
@@ -365,85 +329,6 @@ export class QilingDebugger extends EventEmitter {
 		this.sendEvent('stopOnStep'); // this sends the event to the frontend
 		
 	}
-
-	// private updateCurrentLine(reverse: boolean): boolean {
-		// return false;
-	// 	if (reverse) {
-	// 		if (this.currentLine > 0) {
-	// 			this.currentLine--;
-	// 		} else {
-	// 			// no more lines: stop at first line
-	// 			this.currentLine = 0;
-	// 			this.currentColumn = undefined;
-	// 			this.sendEvent('stopOnEntry');
-	// 			return true;
-	// 		}
-	// 	} else {
-	// 		if (this.currentLine < this.sourceLines.length-1) {
-	// 			this.currentLine++;
-	// 		} else {
-	// 			// no more lines: run to end
-	// 			this.currentColumn = undefined;
-	// 			this.sendEvent('end');
-	// 			return true;
-	// 		}
-	// 	}
-	// 	return false;
-	// }
-
-	// /**
-	//  * "Step into" for Mock debug means: go to next character
-	//  */
-	// public stepIn(targetId: number | undefined) {
-	// 	if (typeof targetId === 'number') {
-	// 		this.currentColumn = targetId;
-	// 		this.sendEvent('stopOnStep');
-	// 	} else {
-	// 		if (typeof this.currentColumn === 'number') {
-	// 			if (this.currentColumn <= this.sourceLines[this.currentLine].length) {
-	// 				this.currentColumn += 1;
-	// 			}
-	// 		} else {
-	// 			this.currentColumn = 1;
-	// 		}
-	// 		this.sendEvent('stopOnStep');
-	// 	}
-	// }
-
-	// /**
-	//  * "Step out" for Mock debug means: go to previous character
-	//  */
-	// public stepOut() {
-	// 	if (typeof this.currentColumn === 'number') {
-	// 		this.currentColumn -= 1;
-	// 		if (this.currentColumn === 0) {
-	// 			this.currentColumn = undefined;
-	// 		}
-	// 	}
-	// 	this.sendEvent('stopOnStep');
-	// }
-
-	// public getStepInTargets(frameId: number): IRuntimeStepInTargets[] {
-
-	// 	const line = this.getLine();
-	// 	const words = this.getWords(this.currentLine, line);
-
-	// 	// return nothing if frameId is out of range
-	// 	if (frameId < 0 || frameId >= words.length) {
-	// 		return [];
-	// 	}
-
-	// 	const { name, index  }  = words[frameId];
-
-	// 	// make every character of the frame a potential "step in" target
-	// 	return name.split('').map((c, ix) => {
-	// 		return {
-	// 			id: index + ix,
-	// 			label: `target: ${c}`
-	// 		};
-	// 	});
-	// }
-
 	
 	/**
 	 * Returns the runtime stack within the specified range of frames.
@@ -491,9 +376,9 @@ export class QilingDebugger extends EventEmitter {
 	    return [0];
 	}
 
-	// /*
-	//  * Set breakpoint in file with given line.
-	//  */
+	/*
+	 * Set breakpoint in file with given line.
+	 */
 	public async setBreakPoint(path: string, line: number): Promise<IRuntimeBreakpoint> {
 		path = this.normalizePathAndCasing(path);
 
@@ -534,63 +419,11 @@ export class QilingDebugger extends EventEmitter {
 		this.breakPoints.delete(this.normalizePathAndCasing(path));
 	}
 
-	// public setDataBreakpoint(address: string, accessType: 'read' | 'write' | 'readWrite'): boolean {
-
-	// 	const x = accessType === 'readWrite' ? 'read write' : accessType;
-
-	// 	const t = this.breakAddresses.get(address);
-	// 	if (t) {
-	// 		if (t !== x) {
-	// 			this.breakAddresses.set(address, 'read write');
-	// 		}
-	// 	} else {
-	// 		this.breakAddresses.set(address, x);
-	// 	}
-	// 	return true;
-	// }
-
-	// public clearAllDataBreakpoints(): void {
-	// 	this.breakAddresses.clear();
-	// }
-
-	// public setExceptionsFilters(namedException: string | undefined, otherExceptions: boolean): void {
-	// 	this.namedException = namedException;
-	// 	this.otherExceptions = otherExceptions;
-	// }
-
-	// /**
-	//  * Sets an instruction breakpoint at the specified address.
-	//  * 
-	//  * @param address - The address where the instruction breakpoint should be set.
-	//  * @returns A boolean indicating whether the instruction breakpoint was successfully set.
-	//  */
-	// public setInstructionBreakpoint(address: number): boolean {
-	// 	this.instructionBreakpoints.add(address);
-	// 	return true;
-	// }
-
-	// /**
-	//  * Clears all instruction breakpoints.
-	//  */
-	// public clearInstructionBreakpoints(): void {
-	// 	this.instructionBreakpoints.clear();
-	// }
-
-	// public async getGlobalVariables(cancellationToken?: () => boolean ): Promise<RuntimeVariable[]> {
-
-	// 	let a: RuntimeVariable[] = [];
-
-	// 	for (let i = 0; i < 10; i++) {
-	// 		a.push(new RuntimeVariable(`global_${i}`, i));
-	// 		if (cancellationToken && cancellationToken()) {
-	// 			break;
-	// 		}
-	// 		await timeout(1000);
-	// 	}
-
-	// 	return a;
-	// }
-
+	/**
+	 * Retrieves the general purpose registers from the `variables` map.
+	 * 
+	 * @returns An array of `RuntimeVariable` objects representing the general purpose registers.
+	 */
 	public getGeneralRegisters(): RuntimeVariable[] {
 		// return general purpose type registers from this.variables
 		let generalRegisters: RuntimeVariable[] = [];
@@ -602,6 +435,11 @@ export class QilingDebugger extends EventEmitter {
 		return generalRegisters;
 	}
 
+	/**
+	 * Retrieves the special type registers from the `variables` map.
+	 * 
+	 * @returns An array of `RuntimeVariable` objects representing the special registers.
+	 */
 	public getSpecialRegisters(): RuntimeVariable[] {
 		// return special type registers from this.variables
 		let specialRegisters: RuntimeVariable[] = [];
@@ -613,6 +451,11 @@ export class QilingDebugger extends EventEmitter {
 		return specialRegisters;
 	}
 
+	/**
+	 * Retrieves the system type registers from the `variables` map.
+	 * 
+	 * @returns An array of `RuntimeVariable` objects representing the system registers.
+	 */
 	public getSystemRegisters(): RuntimeVariable[] {
 		// return system type registers from this.variables
 		let systemRegisters: RuntimeVariable[] = [];
@@ -624,6 +467,11 @@ export class QilingDebugger extends EventEmitter {
 		return systemRegisters;
 	}
 
+	/**
+	 * Retrieves the byte type registers from the `variables` map.
+	 * 
+	 * @returns An array of `RuntimeVariable` objects representing the byte type registers.
+	 */
 	public getByteRegisters(): RuntimeVariable[] {
 		// return byte type registers from this.variables
 		let byteRegisters: RuntimeVariable[] = [];
@@ -635,6 +483,11 @@ export class QilingDebugger extends EventEmitter {
 		return byteRegisters;
 	}
 
+	/**
+	 * Retrieves the half type registers from the `variables` map.
+	 * 
+	 * @returns An array of `RuntimeVariable` objects representing the half type registers.
+	 */
 	public getHalfRegisters(): RuntimeVariable[] {
 		// return half type registers from this.variables
 		let halfRegisters: RuntimeVariable[] = [];
@@ -646,6 +499,11 @@ export class QilingDebugger extends EventEmitter {
 		return halfRegisters;
 	}
 
+	/**
+	 * Retrieves an array of single type registers from the `variables` map.
+	 * 
+	 * @returns An array of `RuntimeVariable` objects representing the single type registers.
+	 */
 	public getSingleRegisters(): RuntimeVariable[] {
 		// return single type registers from this.variables
 		let singleRegisters: RuntimeVariable[] = [];
@@ -657,6 +515,11 @@ export class QilingDebugger extends EventEmitter {
 		return singleRegisters;
 	}
 
+	/**
+	 * Retrieves the double type registers from the `variables` map.
+	 * 
+	 * @returns An array of `RuntimeVariable` objects representing the double type registers.
+	 */
 	public getDoubleRegisters(): RuntimeVariable[] {
 		// return double type registers from this.variables
 		let doubleRegisters: RuntimeVariable[] = [];
@@ -668,6 +531,11 @@ export class QilingDebugger extends EventEmitter {
 		return doubleRegisters;
 	}
 
+	/**
+	 * Retrieves the quad type registers from the `variables` map.
+	 * 
+	 * @returns An array of `RuntimeVariable` objects representing the quad type registers.
+	 */
 	public getQuadRegisters(): RuntimeVariable[] {
 		// return quad type registers from this.variables
 		let quadRegisters: RuntimeVariable[] = [];
@@ -679,6 +547,11 @@ export class QilingDebugger extends EventEmitter {
 		return quadRegisters;
 	}
 
+	/**
+	 * Retrieves the vector type registers from the `variables` map.
+	 * 
+	 * @returns An array of `RuntimeVariable` objects representing the vector registers.
+	 */
 	public getVectorRegisters(): RuntimeVariable[] {
 		// return vector type registers from this.variables
 		let vectorRegisters: RuntimeVariable[] = [];
@@ -690,6 +563,11 @@ export class QilingDebugger extends EventEmitter {
 		return vectorRegisters;
 	}
 
+	/**
+	 * Retrieves the work type registers from the `variables` map.
+	 * 
+	 * @returns An array of `RuntimeVariable` objects representing the work type registers.
+	 */
 	public getWorkRegisters(): RuntimeVariable[] {
 		// return work type registers from this.variables
 		let workRegisters: RuntimeVariable[] = [];
@@ -722,33 +600,6 @@ export class QilingDebugger extends EventEmitter {
 	public getRegister(name: string): RuntimeVariable | undefined {
 		return this.variables.get(name);
 	}
-
-	// /**
-	//  * Return words of the given address range as "instructions"
-	//  */
-	// public disassemble(address: number, instructionCount: number): RuntimeDisassembledInstruction[] {
-
-	// 	const instructions: RuntimeDisassembledInstruction[] = [];
-
-	// 	for (let a = address; a < address + instructionCount; a++) {
-	// 		if (a >= 0 && a < this.instructions.length) {
-	// 			instructions.push({
-	// 				address: a,
-	// 				instruction: this.instructions[a].name,
-	// 				line: this.instructions[a].line
-	// 			});
-	// 		} else {
-	// 			instructions.push({
-	// 				address: a,
-	// 				instruction: 'nop'
-	// 			});
-	// 		}
-	// 	}
-
-	// 	return instructions;
-	// }
-
-	// // private methods
 
 	/**
 	 * Retrieves the content of a specific line from the source code.
