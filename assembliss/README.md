@@ -1,65 +1,112 @@
-# assembliss README
+# AssemBliss
 
-This is the README for your extension "assembliss". After writing up a brief description, we recommend including the following sections.
+AssemBliss is a Visual Studio Code extension designed to streamline the assembly programming process by providing tools for assembling, linking, debugging, and executing assembly code. Developed by a senior design group at North Carolina State University, this extension is a handy tool for developers working with ARM assembly code.
+
+## Getting Started
+
+### Prerequisites
+
+Before you can use AssemBliss, you need to install the following software on your computer:
+
+- Visual Studio Code
+- Node.js and TypeScript
+- Python 3.11 and pip
+- ARM GNU Toolchain for AArch64
+- Qiling Framework
+
+Run the following commands to install additional required packages:
+
+```bash
+sudo apt update
+sudo apt install node-typescript -y
+sudo apt install binutils-aarch64-linux-gnu -y
+sudo apt install python3 -y
+sudo apt upgrade python3-pip -y
+pip3 install qiling
+```
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- **Loading, Editing, and Saving**: Directly manage assembly files within VS Code.
+- **Assembling and Linking**: Integrate with ARM GNU toolchain to assemble and link files.
+- **Execution**: Run assembled files directly within the IDE.
+- **Debugging**: Use the Qiling framework for detailed debugging, including breakpoints and step execution.
 
-For example if there is an image subfolder under your extension project workspace:
+## Developer Guide
 
-\!\[feature X\]\(images/feature-x.png\)
+### Setup Environment
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+For development, it's recommended to use Kali Linux (Release: 2024.1, Kernel: Linux 6.6.15-amd64) for compatibility. Here is how to set up your environment:
 
-## Requirements
+1. Install VS Code and Git.
+2. Install Python 3.11.
+3. Ensure all dependencies and toolchains are installed as listed in the prerequisites section.
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+### Architecture
 
-## Extension Settings
+AssemBliss consists of several components:
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+- **Assembler & Linker**: Located at `/assembliss/src/AssemblerLinker`, handles the assembly and linking of ARM files.
+- **Runner and Debugger Backend**: Located at `/assembliss/src/backend`, manages the execution and debugging backend processes.
+- **Debugger Frontend**: Integrates with VS Code to provide a seamless debugging experience.
 
-For example:
+### Running the Extension
 
-This extension contributes the following settings:
+When the extension is installed or running in an extension development host, the extension will automatically deploy when an assembly file is open or a debugging session is initiated.
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+### Using AssemBliss
 
-## Known Issues
+#### Loading, Editing, and Saving Assembly Files
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+1. **Loading an Assembly File**
+   - Click on the "Explorer" icon on the left-hand side of VS Code.
+   - Click "Open Folder" and navigate to your assembly file.
+   - Select the file to load it into VS Code.
 
-## Release Notes
+2. **Editing an Assembly File**
+   - Once loaded, the AssemBliss extension will automatically detect the file and allow editing in the text editor.
 
-Users appreciate release notes as you update your extension.
+3. **Saving an Assembly File**
+   - To save changes, press `Ctrl + S` (or `Cmd + S` on Mac).
 
-### 1.0.0
+#### Assembling and Linking an Assembly File
 
-Initial release of ...
+1. To assemble and link, use the AssemBliss commands via the Command Palette (`Ctrl+Shift+P`).
+   - Select "AssemBliss: AS" to assemble the file.
+   - Select "AssemBliss: LD" to link the assembled file.
 
-### 1.0.1
+#### Executing an Assembly File
 
-Fixed issue #.
+1. To execute the assembled and linked file:
+   - Open the Command Palette and select "AssemBliss: Run Editor Contents".
 
-### 1.1.0
+#### Debugging an Assembly File
 
-Added features X, Y, and Z.
+1. To debug:
+   - Load and assemble your file as described.
+   - Set breakpoints and then run "AssemBliss: Debug Editor Contents" from the Command Palette.
 
----
+   This will open the AssemBliss debug menu, displaying memory, CPU registers, and condition flags.
 
-## Working with Markdown
 
-You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
+## Known Issues and Upgrades
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets
+- Condition flags and memory access are limited due to current backend capabilities.
+- Plans to include Docker support for ease of setup and use.
 
-## For more information
+For more information and updates, visit [AssemBliss GitHub Repository](https://github.ncsu.edu/engr-csc-sdc/2024SpringTeam37-Batista).
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+## Authors
 
-**Enjoy!**
+- Ivan Basora
+- Samuel Burke
+- Alex Chen
+- Alex Field
+- Willie Harris
+
+## Acknowledgments
+
+- Dr. Caio Batista de Melo, Project Supervisor
+- CSC 492 Team 37
+- North Carolina State University, Department of Computer Science
+```
