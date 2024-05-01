@@ -588,7 +588,7 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 	 * @param v - The `RuntimeVariable` object to convert.
 	 * @returns The converted `DebugProtocol.Variable` object.
 	 */
-	private convertFromRuntime(v: RuntimeVariable): DebugProtocol.Variable { //TODO: Implement properly, handle registers, stack, and heap
+	private convertFromRuntime(v: RuntimeVariable): DebugProtocol.Variable { 
 
 		let dapVariable: DebugProtocol.Variable = {
 			name: v.name,
@@ -597,7 +597,11 @@ export class AssemblissDebugSession extends DebugAdapter.LoggingDebugSession {
 			variablesReference: 0,
 			evaluateName: '$' + v.name
 		};
-
+		if (dapVariable.type === 'number') {
+			let number = +dapVariable.value;
+			let hexValue = number.toString(16);
+			dapVariable.value = "0x" + hexValue;
+		}
 		return dapVariable;
 	}
 
