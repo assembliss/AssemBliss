@@ -100,7 +100,7 @@ For more information and updates, visit [AssemBliss GitHub Repository](https://g
 
 - Ivan Basora
 - Samuel Burke
-- Alex Chen ([ScraperMan2002](https://github.com/ScraperMan2002))
+- Alex Chen
 - Alex Field
 - Willie Harris
 
