@@ -60,17 +60,16 @@ Temporary Items
 # End of https://www.toptal.com/developers/gitignore/api/macos
 
 # Submodules
-assembliss/Qdb/*
-assembliss/rootfs/*
+rootfs/*
 
 # Ignore python compiled files
 *.pyc
 
 #ignore transpiled files
-assembliss/insnINFO.txt
-assembliss/regsINFO.txt
+insnINFO.txt
+regsINFO.txt
 
 #ignore sample workspace files
-assembliss/sampleWorkspace/helloWorld
-assembliss/sampleWorkspace/helloWorld.obj
-assembliss/sampleWorkspace/.vscode/*
+sampleWorkspace/helloWorld
+sampleWorkspace/helloWorld.obj
+sampleWorkspace/.vscode/*

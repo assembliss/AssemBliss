@@ -100,7 +100,7 @@ For more information and updates, visit [AssemBliss GitHub Repository](https://g
 
 - Ivan Basora
 - Samuel Burke
-- Alex Chen
+- Alex Chen ([ScraperMan2002](https://github.com/ScraperMan2002))
 - Alex Field
 - Willie Harris
 
@@ -109,4 +109,7 @@ For more information and updates, visit [AssemBliss GitHub Repository](https://g
 - Dr. Caio Batista de Melo, Project Supervisor
 - CSC 492 Team 37
 - North Carolina State University, Department of Computer Science
-```
+
+## License
+
+This project is licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for more information.
