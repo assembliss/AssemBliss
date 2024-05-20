@@ -93,6 +93,7 @@ When the extension is installed or running in an extension development host, the
 
 - Condition flags and memory access are limited due to current backend capabilities.
 - Plans to include Docker support for ease of setup and use.
+- Plans to consolidate runtime and debug server into standalone debugger.
 
 For more information and updates, visit [AssemBliss GitHub Repository](https://github.ncsu.edu/engr-csc-sdc/2024SpringTeam37-Batista).
 
