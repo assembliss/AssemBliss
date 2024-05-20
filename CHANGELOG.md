@@ -8,6 +8,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 - (New features or changes that will be part of the next release)
 
-## [1.0.0] - 2024-05-08
+## [1.0.0] - 2024-05-08 Initial release
+
+## [1.1.0] - Runtime/debugger is now entirely in python
 
 - Initial release

@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import subprocess
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
 import json
@@ -18,8 +19,6 @@ import sys
 from qiling import Qiling
 from qiling.const import QL_VERBOSE
 from capstone import Cs
-import random
-import subprocess
 
 #root fs file path
 ROOTFS_LOC = r"./rootfs/arm64_linux"
