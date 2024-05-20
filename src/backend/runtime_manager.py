@@ -20,6 +20,8 @@ and debugging ARMv8 assembly code.
 """
 import subprocess
 import os
+from qiling import Qiling
+from qiling.const import QL_VERBOSE
 
 
 class RuntimeManager:
@@ -31,6 +33,7 @@ class RuntimeManager:
         self.assembly_file = assembly_file
         self.obj_file = None
         self.executable = None
+        self.rootfs_loc = r"./rootfs/arm64_linux"
 
     def assemble(self) -> str:
         """
@@ -60,10 +63,30 @@ class RuntimeManager:
         """
         Runs the executable and returns the output.
         """
-        pass
+        # If the executable is not created, link it.
+        if self.executable is None:
+            if self.obj_file is None:
+                self.assemble()
+            self.link()
+        # logging is restricted to warnings, errors and critical entries
+
+        ql = Qiling([self.executable],
+                    self.rootfs_loc,
+                    verbose=QL_VERBOSE.OFF)
+        ql.run()
 
     def debug(self, debugger_server: 'debugger_server') -> None:
         """
         Starts a debugging session using the provided debugger_server.
         """
         pass
+
+
+def main():
+    '''dvsd'''
+    manager = RuntimeManager("sampleWorkspace/helloWorld.s")
+    manager.run()
+    # print(output)
+    
+if __name__ == "__main__":
+    main()
