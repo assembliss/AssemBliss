@@ -1,9 +1,9 @@
 """
 This module contains tests for the runtime manager using the pytest framework.
 """
+import os
 import pytest
 from backend.runtime_manager import RuntimeManager
-import os
 
 
 class TestRuntimeManager:
@@ -23,7 +23,7 @@ class TestRuntimeManager:
         - runtime_manager: An instance of the runtime_manager class.
 
         """
-        return RuntimeManager("../sampleWorkspace/helloWorld.s")
+        return RuntimeManager("sampleWorkspace/helloWorld.s")
 
     def test_assemble(self, manager):
         """
@@ -56,9 +56,9 @@ class TestRuntimeManager:
             AssertionError: If the executable is None.
         """
         # Ensure the assembly step is performed first 
-        if not os.path.exists("../sampleWorkspace/helloWorld.obj"):
+        if not os.path.exists("sampleWorkspace/helloWorld.obj"):
             obj_file = manager.assemble()
-            if not os.path.exists("../sampleWorkspace/helloWorld.obj"):
+            if not os.path.exists("sampleWorkspace/helloWorld.obj"):
                 raise AssertionError("helloWorld.obj is not created")
             
         executable = manager.link()
@@ -70,19 +70,3 @@ class TestRuntimeManager:
             os.remove(obj_file)
         if os.path.exists(executable):
             os.remove(executable)
-
-    # def test_run(self, manager):
-    #     """
-    #     Test the run method of the manager.
-
-    #     Args:
-    #         manager: The runtime manager object.
-
-    #     Returns:
-    #         None
-
-    #     Raises:
-    #         AssertionError: If the expected output is not found in the output
-    #     """
-    #     output = manager.run()
-    #     assert "expected output" in output
