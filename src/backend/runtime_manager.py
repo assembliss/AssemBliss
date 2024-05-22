@@ -59,34 +59,47 @@ class RuntimeManager:
                         '-o', self.executable], check=True)
         return self.executable
 
-    def run(self) -> str:
+    def run(self, verbosity: str = 'default')
         """
-        Runs the executable and returns the output.
+        Runs the executable with the specified verbosity level.
+
+        Args:
+            verbosity (str): The verbosity level ('off', 'info', 'debug', 'trace').
         """
-        # If the executable is not created, link it.
         if self.executable is None:
             if self.obj_file is None:
                 self.assemble()
             self.link()
-        # logging is restricted to warnings, errors and critical entries
 
-        ql = Qiling([self.executable],
-                    self.rootfs_loc,
-                    verbose=QL_VERBOSE.OFF)
+        # Map verbosity levels to QL_VERBOSE levels
+        if verbosity == 'off':
+            verbose_level = QL_VERBOSE.OFF
+        elif verbosity == 'default':
+            verbose_level = QL_VERBOSE.DEFAULT
+        elif verbosity == 'debug':
+            verbose_level = QL_VERBOSE.DEBUG
+        elif verbosity == 'trace':
+            verbose_level = QL_VERBOSE.DUMP
+        else:
+            raise ValueError(f"Unknown verbosity level: {verbosity}")
+
+        ql = Qiling([self.executable], rootfs=self.rootfs_loc,
+                    verbose=verbose_level)
+
         ql.run()
 
-    def debug(self, debugger_server: 'debugger_server') -> None:
+    def debug(self, qiling_debugger: 'qiling_debugger') -> None:
         """
-        Starts a debugging session using the provided debugger_server.
+        Starts a debugging session using the provided qiling_debugger.
         """
         pass
 
 
 def main():
-    '''dvsd'''
+    '''Temporary main function for testing purposes.'''
     manager = RuntimeManager("sampleWorkspace/helloWorld.s")
     manager.run()
-    # print(output)
-    
+
+
 if __name__ == "__main__":
     main()
