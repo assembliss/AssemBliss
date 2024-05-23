@@ -23,6 +23,8 @@ import os
 from qiling import Qiling
 from qiling.const import QL_VERBOSE
 
+from qiling_debugger import QilingDebugger
+
 
 class RuntimeManager:
     """
@@ -59,7 +61,7 @@ class RuntimeManager:
                         '-o', self.executable], check=True)
         return self.executable
 
-    def run(self, verbosity: str = 'default')
+    def run(self, verbosity: str = 'default'):
         """
         Runs the executable with the specified verbosity level.
 
@@ -85,20 +87,28 @@ class RuntimeManager:
 
         ql = Qiling([self.executable], rootfs=self.rootfs_loc,
                     verbose=verbose_level)
-
         ql.run()
 
     def debug(self, qiling_debugger: 'qiling_debugger') -> None:
         """
         Starts a debugging session using the provided qiling_debugger.
         """
+        if self.executable is None:
+            if self.obj_file is None:
+                self.assemble()
+            self.link()
+
+        ql = Qiling([self.executable], rootfs=self.rootfs_loc,
+                    verbose=QL_VERBOSE.DUMP)
+        qiling_debugger = QilingDebugger(ql)
+        
         pass
 
 
 def main():
     '''Temporary main function for testing purposes.'''
     manager = RuntimeManager("sampleWorkspace/helloWorld.s")
-    manager.run()
+    manager.run('debug')
 
 
 if __name__ == "__main__":
