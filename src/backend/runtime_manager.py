@@ -89,27 +89,44 @@ class RuntimeManager:
                     verbose=verbose_level)
         ql.run()
 
-    def debug(self, qiling_debugger: 'qiling_debugger') -> None:
+    def debug(self) -> None:
         """
         Starts a debugging session using the provided qiling_debugger.
         """
-        if self.executable is None:
+        if self.executable is None:  # TODO: add check for file in dir
             if self.obj_file is None:
                 self.assemble()
             self.link()
 
         ql = Qiling([self.executable], rootfs=self.rootfs_loc,
-                    verbose=QL_VERBOSE.DUMP)
+                    verbose=QL_VERBOSE.DEBUG)
         qiling_debugger = QilingDebugger(ql)
         
-        pass
+        qiling_debugger.start(self.executable)
+
+    def objdump(self) -> str:
+        """
+        Disassembles the executable file.
+        Returns the disassembled code as a string.
+        """
+        executable_path = '/usr/bin/aarch64-linux-gnu-objdump'
+
+        if self.executable is None:  # TODO: add check for file in dir
+            if self.obj_file is None:
+                self.assemble()
+            self.link()
+
+        disassembly = subprocess.run([executable_path,
+                                      '-d', '-l', self.executable],
+                                     check=True, capture_output=True)
+        return disassembly.stdout.decode()
 
 
 def main():
     '''Temporary main function for testing purposes.'''
     manager = RuntimeManager("sampleWorkspace/helloWorld.s")
-    manager.run('debug')
-
+    objdump_output = manager.objdump()
+    print(objdump_output)
 
 if __name__ == "__main__":
     main()
