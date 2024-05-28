@@ -1,3 +1,4 @@
+import json
 import re
 from typing import Optional
 from capstone import Cs, CsInsn
@@ -5,34 +6,42 @@ from qiling import Qiling
 from unicorn import UC_ERR_READ_UNMAPPED
 import unicorn
 
+
 class QilingDebugger:
-
-    interupt = None
-    arch_insn_size = 4
-
     """
     A class that manages the debugging of a Qiling instance.
     """
-    def __init__(self, ql: Qiling):
+
+    interrupt = None
+    disassembler_result = None
+    insn_info = None
+    regs = None
+    current_state = None
+
+    def __init__(self, ql: Qiling, objdump: str):
         self.debugger_instance = None
         self.ql = ql
+        self.objdump = objdump
 
     def start(self, binary_file: str) -> None:
         """
         Starts the debugger with the given binary file.
         """
-        if (binary_file is None):
+        if binary_file is None:
             raise ValueError("Binary file path is not provided.")
 
-        self.interupt = None
-        # hook to code and interupts before starting execution
+        self.interrupt = None
+        # hook to code and interrupts before starting execution
         self.ql.clear_hooks()
         self.ql.hook_code(self.simple_disassembler,
                           user_data=self.ql.arch.disassembler)
         self.ql.hook_intr(self.inter_read)
 
         self.ql.run(count=1)
-                
+        objdump_output = self.parse_objdump_output(self.objdump)
+        self.current_state = self.build_program_state_json(self.interrupt,
+                                              self.insn_info, objdump_output)
+
     def set_breakpoint(self, address: int) -> None:
         """
         Sets a breakpoint at the specified address.
@@ -64,7 +73,6 @@ class QilingDebugger:
         """
         Disassembles the instruction at the specified address.
         """
-        rtn = {}
         # Disassemble the memory part to remap it to what instruction happened.
         insn = self.disasm(address, True)
         m = ql.arch.regs.register_mapping
@@ -72,8 +80,9 @@ class QilingDebugger:
         for k in m:
             regs[k] = ql.arch.regs.read(k)
         # add key and value to rtn
-        rtn.update(
-            {f"{insn.address:#x}, {insn.mnemonic:s} {insn.op_str}": regs})
+        rtn = insn.address, insn.mnemonic, insn.op_str, regs
+        self.insn_info = insn
+        self.regs = regs
         return rtn  # NOTE: if {insn.mnemonic:s} {insn.op_str} == udf #0 stop
 
     def parse_objdump_output(self, output: str) -> dict:
@@ -106,16 +115,39 @@ class QilingDebugger:
             address_match = re.match(r'^\s*([0-9a-f]+):\s+[0-9a-f]+\s+.*',
                                      line)
             if address_match and current_line_number is not None:
-                address = address_match.group(1)
+                address = int(address_match.group(1), 16)
                 address_to_line[address] = current_line_number
 
         return address_to_line
 
-    def build_program_state_JSON(self, interupt) -> str:
+    def build_program_state_json(self, interrupt,
+                                 insn_info: CsInsn, objdump: dict) -> dict:
         """
         Builds a JSON object containing the program state.
         """
-        pass
+        # {insn.address:#x}, {insn.mnemonic:s} {insn.op_str}
+        # with open(INSN_INFO_FILE_NAME, 'r') as insnf:
+        #     with open(REGS_INFO_FILE_NAME, 'r') as regsf:
+        #  if interrupt has been detected send interrupt number else send na
+        state = {}
+        if interrupt is not None:
+            state['interrupt'] = f'{interrupt}'
+        else:
+            state['interrupt'] = 'na'
+        # get instruction information from param and read information to get
+        # line number and info about instruction
+        line_number = objdump.get(insn_info.address)
+        state['line_number'] = line_number
+
+        insn_map = {}
+        insn_map['memory'] = insn_info.address
+        instruct = f'{insn_info.mnemonic:s} {insn_info.op_str:s}'
+        insn_map['instruction'] = instruct
+        state['insn'] = insn_map
+
+        state['regs'] = self.regs
+
+        return state
     
     @property
     def cur_addr(self):
@@ -124,6 +156,13 @@ class QilingDebugger:
         """
 
         return self.ql.arch.regs.arch_pc
+    
+    @property
+    def arch_insn_size(self):
+        """
+        Returns the architecture instruction size.
+        """
+        return 4
 
     def read_mem(self, address: int, size: int):
         """
@@ -173,7 +212,7 @@ class QilingDebugger:
 
     def inter_read(self, intno):
         """
-        interupt reader prints interupt number and sets interupt number
-        when qiling hooks to interupt
+        interrupt reader prints interrupt number and sets interrupt number
+        when qiling hooks to interrupt
         """
-        self.interupt = intno
+        self.interrupt = intno

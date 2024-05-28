@@ -100,8 +100,9 @@ class RuntimeManager:
 
         ql = Qiling([self.executable], rootfs=self.rootfs_loc,
                     verbose=QL_VERBOSE.DEBUG)
-        qiling_debugger = QilingDebugger(ql)
-        
+        dump = self.objdump()
+        qiling_debugger = QilingDebugger(ql, dump)
+
         qiling_debugger.start(self.executable)
 
     def objdump(self) -> str:
@@ -125,8 +126,7 @@ class RuntimeManager:
 def main():
     '''Temporary main function for testing purposes.'''
     manager = RuntimeManager("sampleWorkspace/helloWorld.s")
-    objdump_output = manager.objdump()
-    print(objdump_output)
+    manager.debug()
 
 if __name__ == "__main__":
     main()
