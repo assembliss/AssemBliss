@@ -28,6 +28,7 @@ class QilingDebugger:
         self.ql = ql
         self.objdump = objdump
         self.breakpoints_enabled = True
+        self.interrupt = None
 
     def start(self, binary_file: str) -> None:
         """
@@ -80,7 +81,15 @@ class QilingDebugger:
         """
         Steps through the code.
         """
-        pass
+        self.interupt = None
+
+        # read pc register to get next instruction address
+        address = self.ql.arch.regs.read("pc")
+
+        self.ql.run(begin=address, count=1)
+        self.current_state = self.build_program_state_json(self.interupt,
+                                                           self.insn_info,
+                                                           self.objdump)
 
     def get_registers(self) -> dict:
         """

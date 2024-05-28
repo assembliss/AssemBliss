@@ -1,7 +1,4 @@
 
-[submodule "assembliss/rootfs"]
-	path = assembliss/rootfs
-	url = https://github.com/qilingframework/rootfs.git
 [submodule "rootfs"]
 	path = rootfs
 	url = https://github.com/qilingframework/rootfs.git
