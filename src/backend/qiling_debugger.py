@@ -1,4 +1,3 @@
-import json
 import re
 from typing import Optional
 from capstone import Cs, CsInsn
@@ -16,12 +15,19 @@ class QilingDebugger:
     disassembler_result = None
     insn_info = None
     regs = None
-    current_state = None
+    current_state: dict = {'interrupt': str,
+                           'line_number': int,
+                           'insn': {'memory': int, 'instruction': str},
+                           'regs': dict}
+    breakpoints = []
+    next_breakpoint: int
+    breakpoints_enabled: bool
 
     def __init__(self, ql: Qiling, objdump: str):
         self.debugger_instance = None
         self.ql = ql
         self.objdump = objdump
+        self.breakpoints_enabled = True
 
     def start(self, binary_file: str) -> None:
         """
@@ -39,14 +45,36 @@ class QilingDebugger:
 
         self.ql.run(count=1)
         objdump_output = self.parse_objdump_output(self.objdump)
-        self.current_state = self.build_program_state_json(self.interrupt,
-                                              self.insn_info, objdump_output)
+        self.current_state = self.build_program_state_json(
+            self.interrupt, self.insn_info, objdump_output
+        )
 
-    def set_breakpoint(self, address: int) -> None:
+    def set_breakpoint_address(self, address: int) -> None:
         """
         Sets a breakpoint at the specified address.
         """
-        pass
+        # self.breakpoints.append(address)
+        # if self.next_breakpoint is None:
+        #     self.next_breakpoint = address
+        #     return
+        # if (address < self.next_breakpoint and
+        #         self.current_state['insn']['memory'] < address):
+        #     self.next_breakpoint = address
+        line_number = self.objdump.get(address)
+        self.set_breakpoint_line(line_number)
+
+    def set_breakpoint_line(self, line_number: int) -> None:
+        """
+        Sets a breakpoint at the specified line number.
+        """
+        if line_number is not None and line_number not in self.breakpoints:
+            self.breakpoints.append(line_number)
+            if self.next_breakpoint is None:
+                self.next_breakpoint = line_number
+                return
+            if (line_number < self.next_breakpoint and
+                    self.current_state['line_number'] < line_number):
+                self.next_breakpoint = line_number
 
     def step(self) -> None:
         """
@@ -63,6 +91,12 @@ class QilingDebugger:
     def stop(self) -> None:
         """
         Stops the debugger.
+        """
+        pass
+
+    def restart(self) -> None:
+        """
+        Restarts the debugger.
         """
         pass
 
