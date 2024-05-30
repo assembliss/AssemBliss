@@ -11,24 +11,23 @@ class QilingDebugger:
     A class that manages the debugging of a Qiling instance.
     """
 
-    interrupt = None
-    disassembler_result = None
-    insn_info = None
-    regs = None
-    current_state: dict = {'interrupt': str,
-                           'line_number': int,
-                           'insn': {'memory': int, 'instruction': str},
-                           'regs': dict}
-    breakpoints = []
-    next_breakpoint: int
-    breakpoints_enabled: bool
-
     def __init__(self, ql: Qiling, objdump: str):
         self.debugger_instance = None
         self.ql = ql
-        self.objdump = objdump
+        self.objdump = self.parse_objdump_output(objdump)
         self.breakpoints_enabled = True
         self.interrupt = None
+        self.next_breakpoint: int = 0
+        self.disassembler_result = None
+        self.insn_info: CsInsn = None
+        self.regs: dict = {}
+        self.current_state: dict = {'interrupt': str,
+                                    'line_number': int,
+                                    'insn': {'memory': int,
+                                             'instruction': str},
+                                    'regs': dict}
+        self.breakpoints: list = []
+        self.breakpoints_enabled: bool
 
     def start(self, binary_file: str) -> None:
         """
@@ -45,9 +44,8 @@ class QilingDebugger:
         self.ql.hook_intr(self.inter_read)
 
         self.ql.run(count=1)
-        objdump_output = self.parse_objdump_output(self.objdump)
         self.current_state = self.build_program_state_json(
-            self.interrupt, self.insn_info, objdump_output
+            self.interrupt, self.insn_info, self.objdump
         )
 
     def set_breakpoint_address(self, address: int) -> None:
@@ -81,15 +79,24 @@ class QilingDebugger:
         """
         Steps through the code.
         """
-        self.interupt = None
+        self.interrupt = None
 
         # read pc register to get next instruction address
         address = self.ql.arch.regs.read("pc")
 
         self.ql.run(begin=address, count=1)
-        self.current_state = self.build_program_state_json(self.interupt,
+        self.current_state = self.build_program_state_json(self.interrupt,
                                                            self.insn_info,
                                                            self.objdump)
+        if (
+            len(self.breakpoints) > 0 and
+            self.current_state['line_number'] >= self.next_breakpoint
+        ):
+            # find next breakpoint from breakpoints list and set it
+            for point in self.breakpoints:
+                if point > self.current_state['line_number']:
+                    self.next_breakpoint = point
+                    return
 
     def get_registers(self) -> dict:
         """
@@ -130,14 +137,14 @@ class QilingDebugger:
 
     def parse_objdump_output(self, output: str) -> dict:
         """
-        Parses the output of the objdump command and extracts the mapping 
+        Parses the output of the objdump command and extracts the mapping
         between memory addresses and source code line numbers.
 
         Args:
             output (str): The output of the objdump command.
 
         Returns:
-            dict: A dictionary mapping memory addresses to 
+            dict: A dictionary mapping memory addresses to
             source code line numbers.
         """
         address_to_line = {}
@@ -191,7 +198,7 @@ class QilingDebugger:
         state['regs'] = self.regs
 
         return state
-    
+
     @property
     def cur_addr(self):
         """
@@ -199,7 +206,7 @@ class QilingDebugger:
         """
 
         return self.ql.arch.regs.arch_pc
-    
+
     @property
     def arch_insn_size(self):
         """

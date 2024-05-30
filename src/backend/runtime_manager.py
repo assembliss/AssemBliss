@@ -30,12 +30,19 @@ class RuntimeManager:
     """
     Manages the runtime execution of ARMv8 assembly code.
     """
+    @property
+    def debugger(self) -> QilingDebugger:
+        """
+        Returns the debugger instance
+        """
+        return self._debugger
 
     def __init__(self, assembly_file: str):
         self.assembly_file = assembly_file
         self.obj_file = None
         self.executable = None
         self.rootfs_loc = r"./rootfs/arm64_linux"
+        self._debugger = None
 
     def assemble(self) -> str:
         """
@@ -89,7 +96,7 @@ class RuntimeManager:
                     verbose=verbose_level)
         ql.run()
 
-    def debug(self) -> None:
+    def debug(self) -> QilingDebugger:
         """
         Starts a debugging session using the provided qiling_debugger.
         """
@@ -101,9 +108,10 @@ class RuntimeManager:
         ql = Qiling([self.executable], rootfs=self.rootfs_loc,
                     verbose=QL_VERBOSE.DEBUG)
         dump = self.objdump()
-        qiling_debugger = QilingDebugger(ql, dump)
+        self._debugger = QilingDebugger(ql, dump)
 
-        qiling_debugger.start(self.executable)
+        self.debugger.start(self.executable)
+        return self.debugger
 
     def objdump(self) -> str:
         """
@@ -125,8 +133,9 @@ class RuntimeManager:
 
 def main():
     '''Temporary main function for testing purposes.'''
-    manager = RuntimeManager("sampleWorkspace/helloWorld.s")
-    manager.debug()
-
+    debugger = RuntimeManager("sampleWorkspace/helloWorld.s").debug()
+    for i in range(8):
+        debugger.step()
+        print(debugger.current_state['interrupt'])
 if __name__ == "__main__":
     main()
