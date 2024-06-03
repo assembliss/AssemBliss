@@ -96,7 +96,7 @@ class RuntimeManager:
                     verbose=verbose_level)
         ql.run()
 
-    def debug(self) -> QilingDebugger:
+    def debug(self, verbosity: str = "debug") -> QilingDebugger:
         """
         Starts a debugging session using the provided qiling_debugger.
         """
@@ -105,8 +105,19 @@ class RuntimeManager:
                 self.assemble()
             self.link()
 
+        if verbosity == 'off':
+            verbose_level = QL_VERBOSE.OFF
+        elif verbosity == 'default':
+            verbose_level = QL_VERBOSE.DEFAULT
+        elif verbosity == 'debug':
+            verbose_level = QL_VERBOSE.DEBUG
+        elif verbosity == 'trace':
+            verbose_level = QL_VERBOSE.DUMP
+        else:
+            raise ValueError(f"Unknown verbosity level: {verbosity}")
+
         ql = Qiling([self.executable], rootfs=self.rootfs_loc,
-                    verbose=QL_VERBOSE.DEBUG)
+                    verbose=verbose_level)
         dump = self.objdump()
         self._debugger = QilingDebugger(ql, dump)
 
@@ -133,9 +144,11 @@ class RuntimeManager:
 
 def main():
     '''Temporary main function for testing purposes.'''
-    debugger = RuntimeManager("sampleWorkspace/helloWorld.s").debug()
+    debugger = RuntimeManager("sampleWorkspace/helloWorld.s").debug('off')
     for i in range(8):
         debugger.step()
-        print(debugger.current_state['interrupt'])
+        if debugger.current_state['interrupt'] == 2:
+            print(debugger.current_state['interrupt'])
+            print(debugger.current_state['line_number'])
 if __name__ == "__main__":
     main()

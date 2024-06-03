@@ -15,7 +15,6 @@ class QilingDebugger:
         self.debugger_instance = None
         self.ql = ql
         self.objdump = self.parse_objdump_output(objdump)
-        self.breakpoints_enabled = True
         self.interrupt = None
         self.next_breakpoint: int = 0
         self.disassembler_result = None
@@ -41,7 +40,7 @@ class QilingDebugger:
         self.ql.clear_hooks()
         self.ql.hook_code(self.simple_disassembler,
                           user_data=self.ql.arch.disassembler)
-        self.ql.hook_intr(self.inter_read)
+        self.ql.hook_intr(self.inter_read)  # used to set interrupt number
 
         self.ql.run(count=1)
         self.current_state = self.build_program_state_json(
@@ -102,19 +101,50 @@ class QilingDebugger:
         """
         Returns the current state of the registers.
         """
-        pass
+        return self.regs
 
-    def stop(self) -> None:
+    def stop(self) -> dict:
         """
         Stops the debugger.
+        TODO: figure out if ql.stop ends execution or just pauses it.
+            For now, here is implementation pausing it.
         """
-        pass
+        self.ql.stop()
+        # if this paused execution, then we need to update the current state
+        # TODO: test that the current state is updated by calling stop mid loop 
+        # that updates a register value every iteration
+        self.current_state = self.build_program_state_json(self.interrupt,
+                                                           self.insn_info,
+                                                           self.objdump)
+        return self.current_state
 
-    def restart(self) -> None:
+    def restart(self, objdump: Optional[str]) -> None:
         """
         Restarts the debugger.
         """
-        pass
+        self.ql = Qiling([self.ql.path],
+                         rootfs=self.ql.rootfs_loc,
+                         verbose=self.ql.verbose)
+        self.debugger_instance = None
+        if objdump is not None:
+            self.objdump = self.parse_objdump_output(objdump)
+        # self.breakpoints_enabled = True
+        self.interrupt = None
+        if len(self.breakpoints) > 0:
+            self.next_breakpoint = self.breakpoints[0]
+        else:
+            self.next_breakpoint: int = 0
+        self.disassembler_result = None
+        self.insn_info: CsInsn = None
+        self.regs: dict = {}
+        self.current_state: dict = {'interrupt': str,
+                                    'line_number': int,
+                                    'insn': {'memory': int,
+                                             'instruction': str},
+                                    'regs': dict}
+        # self.breakpoints: list = []
+        # self.breakpoints_enabled: bool
+        self.start(self.ql.path)
 
     # Helper functions
 
@@ -174,6 +204,7 @@ class QilingDebugger:
                                  insn_info: CsInsn, objdump: dict) -> dict:
         """
         Builds a JSON object containing the program state.
+        This is necessary to send the program state to the frontend.
         """
         # {insn.address:#x}, {insn.mnemonic:s} {insn.op_str}
         # with open(INSN_INFO_FILE_NAME, 'r') as insnf:
@@ -195,7 +226,7 @@ class QilingDebugger:
         insn_map['instruction'] = instruct
         state['insn'] = insn_map
 
-        state['regs'] = self.regs
+        state['regs'] = self.get_registers()
 
         return state
 
@@ -260,9 +291,10 @@ class QilingDebugger:
         """
         return self.read_mem(address, self.arch_insn_size)
 
-    def inter_read(self, intno):
+    def inter_read(self, ql: Qiling, intno: Optional[int]):
         """
         interrupt reader prints interrupt number and sets interrupt number
         when qiling hooks to interrupt
         """
-        self.interrupt = intno
+        if intno is not None:
+            self.interrupt = intno
