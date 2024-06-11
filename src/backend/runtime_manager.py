@@ -22,7 +22,6 @@ import subprocess
 import os
 from qiling import Qiling
 from qiling.const import QL_VERBOSE
-
 from qiling_debugger import QilingDebugger
 
 
@@ -73,7 +72,8 @@ class RuntimeManager:
         Runs the executable with the specified verbosity level.
 
         Args:
-            verbosity (str): The verbosity level ('off', 'info', 'debug', 'trace').
+            verbosity (str): The verbosity level
+            ('off', 'info', 'debug', 'trace').
         """
         if self.executable is None:
             if self.obj_file is None:
@@ -145,10 +145,12 @@ class RuntimeManager:
 def main():
     '''Temporary main function for testing purposes.'''
     debugger = RuntimeManager("sampleWorkspace/helloWorld.s").debug('off')
-    for i in range(8):
+    for _ in range(2):
         debugger.step()
-        if debugger.current_state['interrupt'] == 2:
-            print(debugger.current_state['interrupt'])
-            print(debugger.current_state['line_number'])
+    debugger.set_breakpoint_line(24, None)
+    debugger.cont(None)
+    debugger.step()
+    print(debugger.current_state.get('line_number'))
+
 if __name__ == "__main__":
     main()
