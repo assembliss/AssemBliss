@@ -61,6 +61,10 @@ function isWorkRegister(register) {
 }
 exports.isWorkRegister = isWorkRegister;
 class RuntimeVariable {
+    constructor(name, _value) {
+        this.name = name;
+        this._value = _value;
+    }
     /**
      * Returns the value of the variable.
      */
@@ -82,10 +86,6 @@ class RuntimeVariable {
             this._memory = new TextEncoder().encode(this._value);
         }
         return this._memory;
-    }
-    constructor(name, _value) {
-        this.name = name;
-        this._value = _value;
     }
 }
 exports.RuntimeVariable = RuntimeVariable;
@@ -110,17 +110,6 @@ exports.timeout = timeout;
  * state from the python server and holds the breakpoints and line numbers.
 */
 class QilingDebugger extends events_1.EventEmitter {
-    get sourceFile() {
-        return this._sourceFile;
-    }
-    get currentLine() {
-        return this._currentLine;
-    }
-    set currentLine(x) {
-        this._currentLine = x;
-        // this.instruction = this.starts[x];
-        // this.instruction = x;
-    }
     constructor(fileAccessor) {
         super();
         this.fileAccessor = fileAccessor;
@@ -148,6 +137,17 @@ class QilingDebugger extends events_1.EventEmitter {
         // since we want to send breakpoint events, we will assign an id to every event
         // so that the frontend can match events with breakpoints.
         this.breakpointId = 1;
+    }
+    get sourceFile() {
+        return this._sourceFile;
+    }
+    get currentLine() {
+        return this._currentLine;
+    }
+    set currentLine(x) {
+        this._currentLine = x;
+        // this.instruction = this.starts[x];
+        // this.instruction = x;
     }
     /**
      * Start executing the given program.
@@ -266,7 +266,7 @@ class QilingDebugger extends events_1.EventEmitter {
         for (let i = startFrame; i < Math.min(endFrame, words.length); i++) {
             const stackFrame = {
                 index: i,
-                name: `${words[i].text}(${i})`, // use a word of the line as the stackframe name
+                name: `${words[i].text}(${i})`,
                 file: this._sourceFile,
                 line: this.currentLine,
             };

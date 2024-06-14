@@ -16,7 +16,6 @@ class QilingDebugger:
         self.ql = ql
         self.objdump: dict = self.parse_objdump_output(objdump)
         self.interrupt = None
-        self.next_breakpoint: int = 0
         self.disassembler_result = None
         self.insn_info: CsInsn = None
         self.regs: dict = {}
@@ -54,13 +53,6 @@ class QilingDebugger:
         """
         Sets a breakpoint at the specified address.
         """
-        # self.breakpoints.append(address)
-        # if self.next_breakpoint is None:
-        #     self.next_breakpoint = address
-        #     return
-        # if (address < self.next_breakpoint and
-        #         self.current_state['insn']['memory'] < address):
-        #     self.next_breakpoint = address
         line_number = self.objdump.get(address)
         self.set_breakpoint_line(line_number, address)
 
@@ -79,11 +71,13 @@ class QilingDebugger:
                     if value == line_number:
                         self.breakpoints[line_number] = key
                         break
-        if self.next_breakpoint is None or self.next_breakpoint == 0:
-            self.next_breakpoint = line_number
-        elif (line_number < self.next_breakpoint and
-                self.current_state['line_number'] < line_number):
-            self.next_breakpoint = line_number
+    
+    def remove_breakpoint(self, line_number: int) -> None:
+        """
+        Removes a breakpoint at the specified line number.
+        """
+        if line_number in self.breakpoints:
+            del self.breakpoints[line_number]
 
     def step(self, steps: int = 1) -> None:
         """
@@ -102,15 +96,6 @@ class QilingDebugger:
         self.current_state = self.build_program_state_json(self.interrupt,
                                                            self.insn_info,
                                                            self.objdump)
-        if (
-            len(self.breakpoints) > 0 and
-            self.current_state['line_number'] >= self.next_breakpoint
-        ):
-            # find next breakpoint from breakpoints list and set it
-            for point in self.breakpoints:
-                if point > self.current_state['line_number']:
-                    self.next_breakpoint = point
-                    return
 
     def get_registers(self) -> dict:
         """
@@ -145,37 +130,33 @@ class QilingDebugger:
         # This issue is solved by using self.ql.clear_hooks() before running
         # But this causes another issue with svc instructions
         # where the emulated program crashes
+        # For now, just step through individual instructions
         
-        # read pc register to get next instruction address
-        if stop_addr is not None:
-            #FIXME: add check for breakpoint hit
-            while True:  # emulate do while loop
-                self.ql.run(begin=address, count=1)  # using this avoids ql bug
-                last_address = address
-                address = self.ql.arch.regs.read("pc")  # get next inst address
-                self.update_current_state()
-                if address == stop_addr:
-                    break
-                if last_address == address:  # if address is not updated
-                    # (avoid infinite loop)
-                    break
-            #  FIXME: use this when qiling bug mentioned above is fixed
-            # self.ql.run(begin=address, end=stop_addr)
+        # Get last line number by getting value of final key in self.objdump
+        code_end = self.objdump[list(self.objdump.keys())[-1]]
+        while True:  # emulate do while loop
+            self.ql.run(begin=address, count=1)  # using this avoids ql bug
+            last_address = address
+            address = self.ql.arch.regs.read("pc")  # get next inst address
             self.update_current_state()
-        elif (self.breakpoints_enabled and self.next_breakpoint is not None
-              and self.current_state['line_number'] < self.next_breakpoint):
-            #TODO: remove next breakpoint variable because this needs to be
-            # determined after each step because of jumps. Just check if the 
-            # current line number is in the breakpoints list
-        else:
-            stop = list(self.objdump.keys())[-1]
-            while self.current_state['insn']['memory'] <= stop:
-                self.ql.run(begin=address, count=1)
-                last_address = address
-                address = self.ql.arch.regs.read("pc")
-                self.update_current_state()
-                if last_address == address:  # if address is not updated
-                    break
+            if stop_addr is not None and address == stop_addr:
+                break
+            if (self.breakpoints_enabled and
+                (self.current_state['line_number'] in self.breakpoints or
+                    address in self.breakpoints.values())):
+                # TODO: find flaws with mismatched addresses
+                break  # FIXME: this breaks an instruction early, determine if instruction is executed before or after stepping
+            if self.current_state['line_number'] == code_end:
+                # if end of code
+                break
+            if last_address == address:  # if address is not updated
+                # (avoid infinite loop)
+                break
+        #  FIXME: use this when qiling bug mentioned above is fixed.
+        # Calculate whether stop_addr or breakpoint will hit first
+        # Maybe utilize BRK instruction to implement breakpoints
+        # self.ql.run(begin=address, end=stop_addr)
+        self.update_current_state()
 
     def restart(self, objdump: Optional[str]) -> None:
         """
@@ -189,10 +170,6 @@ class QilingDebugger:
             self.objdump = self.parse_objdump_output(objdump)
         # self.breakpoints_enabled = True
         self.interrupt = None
-        if len(self.breakpoints) > 0:
-            self.next_breakpoint = sorted(self.breakpoints.keys())[0]
-        else:
-            self.next_breakpoint: int = 0
         self.disassembler_result = None
         self.insn_info: CsInsn = None
         self.regs: dict = {}
