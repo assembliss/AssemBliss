@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-This module provides a RuntimeManager class for managing the runtime 
+This module provides a RuntimeManager class for managing the runtime
 execution of ARMv8 assembly code.
 
-The RuntimeManager class provides methods for assembling, linking, running, 
+The RuntimeManager class provides methods for assembling, linking, running,
 and debugging ARMv8 assembly code.
 """
 import subprocess
@@ -29,19 +29,13 @@ class RuntimeManager:
     """
     Manages the runtime execution of ARMv8 assembly code.
     """
-    @property
-    def debugger(self) -> QilingDebugger:
-        """
-        Returns the debugger instance
-        """
-        return self._debugger
 
     def __init__(self, assembly_file: str):
         self.assembly_file = assembly_file
         self.obj_file = None
         self.executable = None
         self.rootfs_loc = r"./rootfs/arm64_linux"
-        self._debugger = None
+        self.debugger = None
 
     def assemble(self) -> str:
         """
@@ -119,10 +113,18 @@ class RuntimeManager:
         ql = Qiling([self.executable], rootfs=self.rootfs_loc,
                     verbose=verbose_level)
         dump = self.objdump()
-        self._debugger = QilingDebugger(ql, dump)
-
-        self.debugger.start(self.executable)
+        self.debugger = QilingDebugger(ql, dump)
         return self.debugger
+
+    def start_debugger(self):
+        """
+        Starts the debugger.
+        """
+        if self.debugger is not None:
+            self.debugger.start(self.executable)
+        else:
+            self.debug()
+            self.debugger.start(self.executable)
 
     def objdump(self) -> str:
         """
@@ -144,13 +146,16 @@ class RuntimeManager:
 
 def main():
     '''Temporary main function for testing purposes.'''
-    debugger = RuntimeManager("sampleWorkspace/helloWorld.s").debug('off')
+    manager = RuntimeManager("sampleWorkspace/helloWorld.s")
+    debugger = manager.debug('off')
+    debugger.start(manager.executable)
     for _ in range(2):
         debugger.step()
     debugger.set_breakpoint_line(24, None)
-    debugger.cont(None)
+    debugger.cont()
     debugger.step()
     print(debugger.current_state.get('line_number'))
+
 
 if __name__ == "__main__":
     main()
