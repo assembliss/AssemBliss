@@ -10,13 +10,12 @@ class QilingDebugger:
     """
     A class that manages the debugging of a Qiling instance.
     """
-    #TODO: fix property decorators
-    @property   
+    @property
     def get_registers(self) -> dict:
         """
         Returns the current state of the registers.
         """
-        return self.regs
+        return self._regs
 
     @property
     def cur_addr(self):
@@ -25,7 +24,7 @@ class QilingDebugger:
         This is the address of the next instruction to be executed.
         """
 
-        return self.ql.arch.regs.arch_pc
+        return self._ql.arch.regs.arch_pc
 
     @property
     def arch_insn_size(self):
@@ -39,28 +38,39 @@ class QilingDebugger:
         """
         Returns the current state of the debugger.
         """
-        return self.current_state
-    
+        return self._current_state
+
+    @property
+    def qiling_instance(self) -> Qiling:
+        """
+        Returns the Qiling instance.
+        """
+        return self._ql
+
+    @property
+    def breakpoints(self) -> dict:
+        """
+        Returns the breakpoints.
+        """
+        return self._breakpoints
+
     def __init__(self, ql: Qiling, objdump: str):
-        self.debugger_instance = None
-        self.ql = ql
+        self._ql = ql
         self.objdump: dict = self.parse_objdump_output(objdump)
-        self.interrupt = None
-        self.disassembler_result = None
-        self.insn_info: CsInsn = None
-        self.regs: dict = {}
-        instruction = self.disasm(self.ql.loader.entry_point, True)
-        self.current_state: dict = {
+        self._interrupt = None
+        self._insn_info: CsInsn = None
+        self._regs: dict = {}
+        instruction = self.disasm(self._ql.loader.entry_point, True)
+        self._current_state: dict = {
             'interrupt': str,
-            'line_number': self.objdump.get(self.ql.loader.entry_point),
+            'line_number': self.objdump.get(self._ql.loader.entry_point),
             'insn': {
-                'memory': self.ql.loader.entry_point,
+                'memory': self._ql.loader.entry_point,
                 'instruction': instruction.mnemonic + " " + instruction.op_str
             },
-            'regs': dict}
-
-        # TODO: implement replacing instruction with breakpoint instruction BRK
-        self.breakpoints: dict = {}
+            'regs': dict
+        }
+        self._breakpoints: dict = {}
         self.breakpoints_enabled: bool = True
 
     def start(self, binary_file: str) -> None:
@@ -70,10 +80,10 @@ class QilingDebugger:
         if binary_file is None:
             raise ValueError("Binary file path is not provided.")
 
-        self.interrupt = None
+        self._interrupt = None
         # hook to interrupts before starting execution
-        self.ql.clear_hooks()
-        self.ql.hook_intr(self.inter_read)  # used to set interrupt number
+        self._ql.clear_hooks()
+        self._ql.hook_intr(self.inter_read)  # used to set interrupt number
         self.run()
 
     def set_breakpoint_address(self, address: int) -> None:
@@ -82,13 +92,17 @@ class QilingDebugger:
         """
         # Read the original 4-byte instruction
         original_instruction = self.try_read(address, 4)[0]
-        # original_instruction = bytearray(self.ql.mem.read(address, 4))
-        brk_instruction = b'\x00\x00\x20\xd4'  # brk #0
-        # TODO: find out if I need to differentiate brk instructions #0, #1, etc.
+
+        mnemonic = b'\x20\xd4'
+        immediate = len(self.breakpoints)
+        # convert immediate to bytes
+        immediate_bytes = immediate.to_bytes(2, byteorder='little')
+        brk_instruction = immediate_bytes + mnemonic
+
         # Write the brk instruction to the address
-        self.ql.mem.write(address, brk_instruction)
+        self._ql.mem.write(address, brk_instruction)
         # Save the original instruction
-        self.breakpoints[address] = bytes(original_instruction)
+        self._breakpoints[address] = bytes(original_instruction)
 
     def set_breakpoint_line(self, line_number: int,
                             address: Optional[int]) -> None:
@@ -112,7 +126,7 @@ class QilingDebugger:
                                          + f"{original_line_number} or "
                                          + "any subsequent line.")
         self.set_breakpoint_address(address)
-    
+
     def remove_breakpoint(self, line_number: Optional[int], address: Optional[int]) -> None:
         """
         Removes a breakpoint at the specified line number.
@@ -135,28 +149,27 @@ class QilingDebugger:
                         raise ValueError("No address found for line number "
                                          + f"{line_number} or "
                                          + "any subsequent line.")
-        if address in self.breakpoints:
+        if address in self._breakpoints:
             # restore original instruction
-            self.ql.mem.write(address, self.breakpoints[address])
-            del self.breakpoints[address]  # remove breakpoint from list
+            self._ql.mem.write(address, self._breakpoints[address])
+            del self._breakpoints[address]  # remove breakpoint from list
 
     def step(self, steps: int = 1) -> None:
         """
         Steps through the code.
         """
-        self.interrupt = None
+        self._interrupt = None
 
         # read pc register to get next instruction address
         address = self.cur_addr
 
-        self.run(begin=address, count=steps)  # NOTE: bug with qiling
-        # where hook is not called back after running in address range
+        self.run(begin=address, count=steps)
 
     def cont(self) -> None:
         """
         Continues running the code.
         """
-        self.interrupt = None
+        self._interrupt = None
         
         # read pc register to get next instruction address
         address = self.cur_addr
@@ -166,13 +179,8 @@ class QilingDebugger:
     def stop(self) -> dict:
         """
         Stops the debugger.
-        TODO: figure out if ql.stop ends execution or just pauses it.
-            For now, here is implementation pausing it.
         """
-        self.ql.stop()
-        # if this paused execution, then we need to update the current state
-        # TODO: test that the current state is updated by calling stop mid loop 
-        # that updates a register value every iteration
+        self._ql.stop()
 
         return self.update_current_state()
 
@@ -180,25 +188,31 @@ class QilingDebugger:
         """
         Restarts the debugger.
         """
-        self.ql = Qiling([self.ql.path],
-                         rootfs=self.ql.rootfs,
-                         verbose=self.ql.verbose)
-        self.debugger_instance = None
+        self._ql = Qiling([self._ql.path],
+                         rootfs=self._ql.rootfs,
+                         verbose=self._ql.verbose)
         if objdump is not None:
             self.objdump = self.parse_objdump_output(objdump)
-        # self.breakpoints_enabled = True
-        self.interrupt = None
-        self.disassembler_result = None
-        self.insn_info: CsInsn = None
-        self.regs: dict = {}
-        self.current_state: dict = {'interrupt': str,
-                                    'line_number': int,
-                                    'insn': {'memory': int,
-                                             'instruction': str},
-                                    'regs': dict}
+
+        self._interrupt = None
+        self._insn_info: CsInsn = None
+        self._regs: dict = {}
+        instruction = self.disasm(self._ql.loader.entry_point, True)
+        self._current_state: dict = {
+            'interrupt': str,
+            'line_number': self.objdump.get(self._ql.loader.entry_point),
+            'insn': {
+                'memory': self._ql.loader.entry_point,
+                'instruction': instruction.mnemonic + " " + instruction.op_str
+            },
+            'regs': dict
+        }
+        if self.breakpoints_enabled:
+            for address in self._breakpoints:
+                self.set_breakpoint_address(address)
+
         # self.breakpoints: list = []
         # self.breakpoints_enabled: bool
-        self.start(self.ql.path)
 
     # Helper functions
 
@@ -213,25 +227,25 @@ class QilingDebugger:
         if begin is None:
             if end is not None:  # end cannot be specified without begin
                 raise ValueError("End cannot be specified without begin.")
-            self.ql.run(count=count, timeout=timeout)  # run for count ins
+            self._ql.run(count=count, timeout=timeout)  # run for count ins
         elif end is None:  # run from beginning address
             if count is None:  # continue running until end of code or brkpnt
-                self.ql.run(begin=begin, timeout=timeout)
+                self._ql.run(begin=begin, timeout=timeout)
             else:  # run for count instructions
-                self.ql.run(begin=begin, count=count, timeout=timeout)
+                self._ql.run(begin=begin, count=count, timeout=timeout)
         else:  # run from beginning address to end address
-            self.ql.run(begin=begin, end=end, timeout=timeout)
+            self._ql.run(begin=begin, end=end, timeout=timeout)
 
         # Update the registers after the instruction is executed
-        m = self.ql.arch.regs.register_mapping
+        m = self._ql.arch.regs.register_mapping
         regs = {}
         for k in m:
-            regs[k] = self.ql.arch.regs.read(k)
-        self.regs = regs
+            regs[k] = self._ql.arch.regs.read(k)
+        self._regs = regs
 
         # Update the current state
         self.simple_disassembler(
-            self.ql, self.cur_addr,
+            self._ql, self.cur_addr,
             self.arch_insn_size, md=None)
         self.update_current_state()
 
@@ -245,7 +259,7 @@ class QilingDebugger:
 
         # add key and value to rtn
         rtn = insn.address, insn.mnemonic, insn.op_str
-        self.insn_info = insn
+        self._insn_info = insn
         # self.regs = regs
         return rtn  # NOTE: if {insn.mnemonic:s} {insn.op_str} == udf #0 stop
 
@@ -257,7 +271,7 @@ class QilingDebugger:
         print("Breakpoint hit at line " + str(state.get('line_number'))
               + f" {{{hex(state.get('insn').get('memory'))}}}")
         # restore original instruction
-        self.ql.mem.write(self.cur_addr, self.breakpoints[self.cur_addr])
+        self._ql.mem.write(self.cur_addr, self._breakpoints[self.cur_addr])
 
     def parse_objdump_output(self, output: str) -> dict:
         """
@@ -304,8 +318,8 @@ class QilingDebugger:
         #     with open(REGS_INFO_FILE_NAME, 'r') as regsf:
         #  if interrupt has been detected send interrupt number else send na
         state = {}
-        if self.interrupt is not None:
-            state['interrupt'] = self.interrupt
+        if self._interrupt is not None:
+            state['interrupt'] = self._interrupt
         else:
             state['interrupt'] = 'na'
         # get instruction information from param and read information to get
@@ -314,14 +328,14 @@ class QilingDebugger:
         state['line_number'] = line_number
 
         insn_map = {}
-        insn_map['memory'] = self.insn_info.address
-        instruct = f'{self.insn_info.mnemonic:s} {self.insn_info.op_str:s}'
+        insn_map['memory'] = self._insn_info.address
+        instruct = f'{self._insn_info.mnemonic:s} {self._insn_info.op_str:s}'
         insn_map['instruction'] = instruct
         state['insn'] = insn_map
 
         state['regs'] = self.get_registers
 
-        self.current_state = state
+        self._current_state = state
         return state
 
     def toggle_breakpoints(self) -> None:
@@ -330,19 +344,37 @@ class QilingDebugger:
         """
         self.breakpoints_enabled = not self.breakpoints_enabled
 
+        if self.breakpoints_enabled:
+            for address in self._breakpoints:
+                # read the original 4-byte instruction
+                original_instruction = self.try_read(address, 4)[0]
+                mnemonic = b'\x20\xd4'
+                immediate = len(self._breakpoints)
+                # convert immediate to bytes
+                immediate_bytes = immediate.to_bytes(2, byteorder='little')
+                brk_instruction = immediate_bytes + mnemonic
+                # write the brk instruction to the address
+                self._ql.mem.write(address, brk_instruction)
+                # save the original instruction
+                self._breakpoints[address] = bytes(original_instruction)
+        else:
+            for address, instruction in self._breakpoints.items():
+                # restore original instruction
+                self._ql.mem.write(address, instruction)
+
     def read_mem(self, address: int, size: int):
         """
         read data from memory of qiling instance
         """
 
-        return self.ql.mem.read(address, size)
+        return self._ql.mem.read(address, size)
 
     def disasm(self, address: int, detail: bool = False) -> Optional[CsInsn]:
         """
         helper function for disassembling
         """
 
-        md = self.ql.arch.disassembler
+        md = self._ql.arch.disassembler
         md.detail = detail
 
         return next(md.disasm(self.read_insn(address), address), None)
@@ -383,8 +415,7 @@ class QilingDebugger:
         TODO: figure out if this can be retrieved after instruction is executed
         """
         if intno is not None:
-            self.interrupt = intno
-        if self.cur_addr in self.breakpoints:
-            # if intno == 7:  # interrupt number for BRK instruction TODO: find out if this is correct
+            self._interrupt = intno
+        if self.cur_addr in self._breakpoints and self.breakpoints_enabled:
             self.breakpoint_hit()
         #FIXME: self.curr_addr is not updated after this is called from BRK instruction

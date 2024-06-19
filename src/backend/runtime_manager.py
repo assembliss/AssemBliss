@@ -148,14 +148,31 @@ def main():
     '''Temporary main function for testing purposes.'''
     manager = RuntimeManager("sampleWorkspace/helloWorld.s")
     debugger = manager.debug('off')
-    debugger.start(manager.executable)
-    for _ in range(2):
+    debugger.start(manager.executable) # line 15
+    for _ in range(2): # line 16 and 17
         debugger.step()
     debugger.set_breakpoint_line(24, None)
+    debugger.cont() # line 24
+    debugger.step() # line 25
+    print(debugger.get_current_state.get('line_number'))
+    debugger.restart(None)
+    debugger.start(manager.executable) # line 15
+    for _ in range(2): # line 16 and 17
+        debugger.step()
+    debugger.set_breakpoint_line(19, None)
+    debugger.cont() # line 19
+    print(debugger.get_current_state.get('line_number'))
+    debugger.cont() # line 24
+    debugger.step() # line 25
+    print(debugger.get_current_state.get('line_number'))
+    debugger.restart(None)
+    debugger.start(manager.executable) # line 15
+    debugger.cont() # line 19
+    print(debugger.get_current_state.get('line_number'))
+    debugger.toggle_breakpoints()
     debugger.cont()
-    debugger.step()
-    print(debugger.current_state.get('line_number'))
-
+    print(debugger.get_current_state.get('line_number'))
+    return
 
 if __name__ == "__main__":
     main()
