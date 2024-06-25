@@ -1,6 +1,26 @@
+# Copyright 2024 Willie D. Harris, Jr., Dr. Caio Batista de Melo
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""
+This module provides a QilingDebugger class for debugging a Qiling instance
+running ARMv8 assembly code.
+
+The QilingDebugger class provides methods for setting breakpoints, stepping,
+continuing, and stopping the execution of ARMv8 assembly code.
+"""
 import re
 from typing import Optional
-from capstone import Cs, CsInsn
+from capstone import CsInsn
 from qiling import Qiling
 from unicorn import UC_ERR_READ_UNMAPPED
 import unicorn
@@ -10,6 +30,7 @@ class QilingDebugger:
     """
     A class that manages the debugging of a Qiling instance.
     """
+
     @property
     def get_registers(self) -> dict:
         """
@@ -72,6 +93,7 @@ class QilingDebugger:
         }
         self._breakpoints: dict = {}
         self.breakpoints_enabled: bool = True
+        self._more_lines: bool = False
 
     def start(self, binary_file: str) -> None:
         """
@@ -84,7 +106,9 @@ class QilingDebugger:
         # hook to interrupts before starting execution
         self._ql.clear_hooks()
         self._ql.hook_intr(self.inter_read)  # used to set interrupt number
+        self._more_lines = True
         self.run()
+        self.end_of_code()
 
     def set_breakpoint_address(self, address: int) -> None:
         """
@@ -127,7 +151,8 @@ class QilingDebugger:
                                          + "any subsequent line.")
         self.set_breakpoint_address(address)
 
-    def remove_breakpoint(self, line_number: Optional[int], address: Optional[int]) -> None:
+    def remove_breakpoint(self, line_number: Optional[int],
+                          address: Optional[int]) -> None:
         """
         Removes a breakpoint at the specified line number.
         """
@@ -158,23 +183,31 @@ class QilingDebugger:
         """
         Steps through the code.
         """
+        if not self._more_lines:
+            print("The program is not being run.")
+            return
         self._interrupt = None
 
         # read pc register to get next instruction address
         address = self.cur_addr
 
         self.run(begin=address, count=steps)
+        self.end_of_code()
 
     def cont(self) -> None:
         """
         Continues running the code.
         """
+        if not self._more_lines:
+            print("The program is not being run.")
+            return
         self._interrupt = None
-        
+
         # read pc register to get next instruction address
         address = self.cur_addr
-        
+
         self.run(begin=address, count=None)
+        self.end_of_code()
 
     def stop(self) -> dict:
         """
@@ -189,8 +222,8 @@ class QilingDebugger:
         Restarts the debugger.
         """
         self._ql = Qiling([self._ql.path],
-                         rootfs=self._ql.rootfs,
-                         verbose=self._ql.verbose)
+                          rootfs=self._ql.rootfs,
+                          verbose=self._ql.verbose)
         if objdump is not None:
             self.objdump = self.parse_objdump_output(objdump)
 
@@ -210,7 +243,7 @@ class QilingDebugger:
         if self.breakpoints_enabled:
             for address in self._breakpoints:
                 self.set_breakpoint_address(address)
-
+        self._more_lines = False
         # self.breakpoints: list = []
         # self.breakpoints_enabled: bool
 
@@ -244,24 +277,22 @@ class QilingDebugger:
         self._regs = regs
 
         # Update the current state
-        self.simple_disassembler(
-            self._ql, self.cur_addr,
-            self.arch_insn_size, md=None)
+        self.simple_disassembler(self.cur_addr)
         self.update_current_state()
 
-    def simple_disassembler(self, ql: Qiling, address: int,
-                            size: int, md: Cs) -> dict:
+    def simple_disassembler(self, address: int) -> None:
         """
         Disassembles the instruction at the specified address.
         """
         # Disassemble the memory part to remap it to what instruction happened.
         insn = self.disasm(address, True)
 
-        # add key and value to rtn
-        rtn = insn.address, insn.mnemonic, insn.op_str
+        if insn is None:
+            self._insn_info = self.disasm(address - self.arch_insn_size, True)
+            self._more_lines = False
+            return
+
         self._insn_info = insn
-        # self.regs = regs
-        return rtn  # NOTE: if {insn.mnemonic:s} {insn.op_str} == udf #0 stop
 
     def breakpoint_hit(self) -> bool:
         """
@@ -408,14 +439,17 @@ class QilingDebugger:
         """
         return self.read_mem(address, self.arch_insn_size)
 
-    def inter_read(self, ql: Qiling, intno: Optional[int]):
+    def inter_read(self, _ql: Qiling, intno: Optional[int]):
         """
         interrupt reader prints interrupt number and sets interrupt number
         when qiling hooks to interrupt
-        TODO: figure out if this can be retrieved after instruction is executed
         """
         if intno is not None:
             self._interrupt = intno
         if self.cur_addr in self._breakpoints and self.breakpoints_enabled:
             self.breakpoint_hit()
-        #FIXME: self.curr_addr is not updated after this is called from BRK instruction
+
+    def end_of_code(self):
+        if not self._more_lines:
+            print(hex(self.cur_addr - self.arch_insn_size)
+                  + "[Inferior 1 exited normally]")
