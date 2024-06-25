@@ -105,9 +105,9 @@ class QilingDebugger:
         self._interrupt = None
         # hook to interrupts before starting execution
         self._ql.clear_hooks()
-        self._ql.hook_intr(self.inter_read)  # used to set interrupt number
+        self._ql.hook_intr(self._inter_read)  # used to set interrupt number
         self._more_lines = True
-        self.run()
+        self._run()
         self.end_of_code()
 
     def set_breakpoint_address(self, address: int) -> None:
@@ -191,7 +191,7 @@ class QilingDebugger:
         # read pc register to get next instruction address
         address = self.cur_addr
 
-        self.run(begin=address, count=steps)
+        self._run(begin=address, count=steps)
         self.end_of_code()
 
     def cont(self) -> None:
@@ -206,7 +206,7 @@ class QilingDebugger:
         # read pc register to get next instruction address
         address = self.cur_addr
 
-        self.run(begin=address, count=None)
+        self._run(begin=address, count=None)
         self.end_of_code()
 
     def stop(self) -> dict:
@@ -247,11 +247,35 @@ class QilingDebugger:
         # self.breakpoints: list = []
         # self.breakpoints_enabled: bool
 
+    def toggle_breakpoints(self) -> None:
+        """
+        Toggles the breakpoints on and off.
+        """
+        self.breakpoints_enabled = not self.breakpoints_enabled
+
+        if self.breakpoints_enabled:
+            for address in self._breakpoints:
+                # read the original 4-byte instruction
+                original_instruction = self.try_read(address, 4)[0]
+                mnemonic = b'\x20\xd4'
+                immediate = len(self._breakpoints)
+                # convert immediate to bytes
+                immediate_bytes = immediate.to_bytes(2, byteorder='little')
+                brk_instruction = immediate_bytes + mnemonic
+                # write the brk instruction to the address
+                self._ql.mem.write(address, brk_instruction)
+                # save the original instruction
+                self._breakpoints[address] = bytes(original_instruction)
+        else:
+            for address, instruction in self._breakpoints.items():
+                # restore original instruction
+                self._ql.mem.write(address, instruction)
+
     # Helper functions
 
-    def run(self, begin: Optional[int] = None,
-            end: Optional[int] = None, count: int = 1,
-            timeout: int = 10000) -> None:
+    def _run(self, begin: Optional[int] = None,
+             end: Optional[int] = None, count: int = 1,
+             timeout: int = 10000) -> None:
         """
         Runs the debugger for the specified number of instructions.
         Updates the current state of the debugger through hook and
@@ -277,10 +301,10 @@ class QilingDebugger:
         self._regs = regs
 
         # Update the current state
-        self.simple_disassembler(self.cur_addr)
+        self._simple_disassembler(self.cur_addr)
         self.update_current_state()
 
-    def simple_disassembler(self, address: int) -> None:
+    def _simple_disassembler(self, address: int) -> None:
         """
         Disassembles the instruction at the specified address.
         """
@@ -294,7 +318,7 @@ class QilingDebugger:
 
         self._insn_info = insn
 
-    def breakpoint_hit(self) -> bool:
+    def _breakpoint_hit(self) -> bool:
         """
         Handles the breakpoint hit event.
         """
@@ -304,7 +328,8 @@ class QilingDebugger:
         # restore original instruction
         self._ql.mem.write(self.cur_addr, self._breakpoints[self.cur_addr])
 
-    def parse_objdump_output(self, output: str) -> dict:
+    @staticmethod
+    def parse_objdump_output(output: str) -> dict:
         """
         Parses the output of the objdump command and extracts the mapping
         between memory addresses and source code line numbers.
@@ -369,30 +394,6 @@ class QilingDebugger:
         self._current_state = state
         return state
 
-    def toggle_breakpoints(self) -> None:
-        """
-        Toggles the breakpoints on and off.
-        """
-        self.breakpoints_enabled = not self.breakpoints_enabled
-
-        if self.breakpoints_enabled:
-            for address in self._breakpoints:
-                # read the original 4-byte instruction
-                original_instruction = self.try_read(address, 4)[0]
-                mnemonic = b'\x20\xd4'
-                immediate = len(self._breakpoints)
-                # convert immediate to bytes
-                immediate_bytes = immediate.to_bytes(2, byteorder='little')
-                brk_instruction = immediate_bytes + mnemonic
-                # write the brk instruction to the address
-                self._ql.mem.write(address, brk_instruction)
-                # save the original instruction
-                self._breakpoints[address] = bytes(original_instruction)
-        else:
-            for address, instruction in self._breakpoints.items():
-                # restore original instruction
-                self._ql.mem.write(address, instruction)
-
     def read_mem(self, address: int, size: int):
         """
         read data from memory of qiling instance
@@ -439,7 +440,7 @@ class QilingDebugger:
         """
         return self.read_mem(address, self.arch_insn_size)
 
-    def inter_read(self, _ql: Qiling, intno: Optional[int]):
+    def _inter_read(self, _ql: Qiling, intno: Optional[int]):
         """
         interrupt reader prints interrupt number and sets interrupt number
         when qiling hooks to interrupt
@@ -447,9 +448,13 @@ class QilingDebugger:
         if intno is not None:
             self._interrupt = intno
         if self.cur_addr in self._breakpoints and self.breakpoints_enabled:
-            self.breakpoint_hit()
+            self._breakpoint_hit()
 
     def end_of_code(self):
+        """
+        Handles the scenario when the debugger reaches the end of
+        the executable code.
+        """
         if not self._more_lines:
             print(hex(self.cur_addr - self.arch_insn_size)
                   + "[Inferior 1 exited normally]")

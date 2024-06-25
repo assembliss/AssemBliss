@@ -131,10 +131,7 @@ class RuntimeManager:
         """
         executable_path = '/usr/bin/aarch64-linux-gnu-objdump'
 
-        if self.executable is None:  # TODO: add check for file in dir
-            if self.obj_file is None:
-                self.assemble()
-            self.link()
+        self.verify_executable()
 
         disassembly = subprocess.run([executable_path,  # nosec
                                       '-d', '-l', self.executable],
