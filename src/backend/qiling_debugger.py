@@ -75,6 +75,13 @@ class QilingDebugger:
         """
         return self._breakpoints
 
+    @property
+    def running(self) -> bool:
+        """
+        Returns whether the debugger is running.
+        """
+        return self._running
+
     def __init__(self, ql: Qiling, objdump: str):
         self._ql = ql
         self.objdump: dict = self.parse_objdump_output(objdump)
@@ -93,7 +100,9 @@ class QilingDebugger:
         }
         self._breakpoints: dict = {}
         self.breakpoints_enabled: bool = True
-        self._more_lines: bool = False
+        self._running: bool = False
+
+        self._orignal_state = self.qiling_instance.save()
 
     def start(self, binary_file: str) -> None:
         """
@@ -104,11 +113,10 @@ class QilingDebugger:
 
         self._interrupt = None
         # hook to interrupts before starting execution
-        self._ql.clear_hooks()
+        # self._ql.clear_hooks()
         self._ql.hook_intr(self._inter_read)  # used to set interrupt number
-        self._more_lines = True
+        self._running = True
         self._run()
-        self.end_of_code()
 
     def set_breakpoint_address(self, address: int) -> None:
         """
@@ -176,14 +184,14 @@ class QilingDebugger:
                                          + "any subsequent line.")
         if address in self._breakpoints:
             # restore original instruction
-            self._ql.mem.write(address, self._breakpoints[address])
+            self.qiling_instance.mem.write(address, self._breakpoints[address])
             del self._breakpoints[address]  # remove breakpoint from list
 
     def step(self, steps: int = 1) -> None:
         """
         Steps through the code.
         """
-        if not self._more_lines:
+        if not self.running:
             print("The program is not being run.")
             return
         self._interrupt = None
@@ -192,13 +200,12 @@ class QilingDebugger:
         address = self.cur_addr
 
         self._run(begin=address, count=steps)
-        self.end_of_code()
 
     def cont(self) -> None:
         """
         Continues running the code.
         """
-        if not self._more_lines:
+        if not self.running:
             print("The program is not being run.")
             return
         self._interrupt = None
@@ -207,13 +214,12 @@ class QilingDebugger:
         address = self.cur_addr
 
         self._run(begin=address, count=None)
-        self.end_of_code()
 
     def stop(self) -> dict:
         """
         Stops the debugger.
         """
-        self._ql.stop()
+        self.qiling_instance.emu_stop()
 
         return self.update_current_state()
 
@@ -221,19 +227,22 @@ class QilingDebugger:
         """
         Restarts the debugger.
         """
-        self._ql = Qiling([self._ql.path],
-                          rootfs=self._ql.rootfs,
-                          verbose=self._ql.verbose)
+        # FIXME: _inter_read is called as many times as restart is called
+        self.stop()
+        self._ql.restore(self._orignal_state)
+
         if objdump is not None:
             self.objdump = self.parse_objdump_output(objdump)
 
         self._interrupt = None
         self._insn_info: CsInsn = None
         self._regs: dict = {}
-        instruction = self.disasm(self._ql.loader.entry_point, True)
+        instruction = self.disasm(
+            self.qiling_instance.loader.entry_point, True)
         self._current_state: dict = {
             'interrupt': str,
-            'line_number': self.objdump.get(self._ql.loader.entry_point),
+            'line_number': self.objdump.get(
+                self.qiling_instance.loader.entry_point),
             'insn': {
                 'memory': self._ql.loader.entry_point,
                 'instruction': instruction.mnemonic + " " + instruction.op_str
@@ -243,9 +252,7 @@ class QilingDebugger:
         if self.breakpoints_enabled:
             for address in self._breakpoints:
                 self.set_breakpoint_address(address)
-        self._more_lines = False
-        # self.breakpoints: list = []
-        # self.breakpoints_enabled: bool
+        self._running = False
 
     def toggle_breakpoints(self) -> None:
         """
@@ -284,14 +291,17 @@ class QilingDebugger:
         if begin is None:
             if end is not None:  # end cannot be specified without begin
                 raise ValueError("End cannot be specified without begin.")
-            self._ql.run(count=count, timeout=timeout)  # run for count ins
+            self._ql.emu_start(begin=self._ql.loader.entry_point,
+                               end=0, count=count, timeout=timeout)
         elif end is None:  # run from beginning address
             if count is None:  # continue running until end of code or brkpnt
-                self._ql.run(begin=begin, timeout=timeout)
+                self._ql.emu_start(begin=begin, end=0,
+                                   timeout=timeout)
             else:  # run for count instructions
-                self._ql.run(begin=begin, count=count, timeout=timeout)
+                self._ql.emu_start(begin=begin, end=0,
+                                   count=count, timeout=timeout)
         else:  # run from beginning address to end address
-            self._ql.run(begin=begin, end=end, timeout=timeout)
+            self._ql.emu_start(begin=begin, end=end, timeout=timeout)
 
         # Update the registers after the instruction is executed
         m = self._ql.arch.regs.register_mapping
@@ -313,9 +323,11 @@ class QilingDebugger:
 
         if insn is None:
             self._insn_info = self.disasm(address - self.arch_insn_size, True)
-            self._more_lines = False
+            self.update_current_state()
+            print(hex(self.cur_addr - self.arch_insn_size)
+                  + "[Inferior 1 exited normally]")
+            self._running = False
             return
-
         self._insn_info = insn
 
     def _breakpoint_hit(self) -> bool:
@@ -324,7 +336,7 @@ class QilingDebugger:
         """
         state = self.stop()
         print("Breakpoint hit at line " + str(state.get('line_number'))
-              + f" {{{hex(state.get('insn').get('memory'))}}}")
+              + f" {{{self.cur_addr:#x}}}")
         # restore original instruction
         self._ql.mem.write(self.cur_addr, self._breakpoints[self.cur_addr])
 
@@ -449,12 +461,3 @@ class QilingDebugger:
             self._interrupt = intno
         if self.cur_addr in self._breakpoints and self.breakpoints_enabled:
             self._breakpoint_hit()
-
-    def end_of_code(self):
-        """
-        Handles the scenario when the debugger reaches the end of
-        the executable code.
-        """
-        if not self._more_lines:
-            print(hex(self.cur_addr - self.arch_insn_size)
-                  + "[Inferior 1 exited normally]")

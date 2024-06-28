@@ -60,6 +60,11 @@ class RuntimeManager:
         """
         executable_path = '/usr/bin/aarch64-linux-gnu-ld'
 
+        if self.obj_file is None:
+            assembled = self.check_dir(self.assembly_file)[0]
+            if not assembled:
+                self.assemble()
+
         self.executable = os.path.splitext(self.assembly_file)[0]
         subprocess.run([executable_path, self.obj_file,  # nosec
                         '-o', self.executable], check=True)
@@ -170,7 +175,7 @@ class RuntimeManager:
             e.g. 'sampleWorkspace/helloWorld.s'.
 
         Returns:
-            tuple: A tuple containing two boolean values. The first boolean 
+            tuple: A tuple containing two boolean values. The first boolean
                 indicates whether an obj file is present, and the second
                 boolean indicates whether an executable file is present.
         """
@@ -196,6 +201,7 @@ def main():
     debugger.step()  # line 25
     print(debugger.get_current_state.get('line_number'))
     debugger.restart(None)
+    debugger.step()  # Program is not running
     debugger.start(manager.executable)  # line 15
     for _ in range(2):  # line 16 and 17
         debugger.step()
@@ -206,6 +212,7 @@ def main():
     debugger.step()  # line 25
     print(debugger.get_current_state.get('line_number'))
     debugger.restart(None)
+    debugger.cont()  # Program is not running
     debugger.start(manager.executable)  # line 15
     debugger.cont()  # line 19
     print(debugger.get_current_state.get('line_number'))
