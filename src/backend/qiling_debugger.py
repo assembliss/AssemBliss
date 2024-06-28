@@ -101,7 +101,9 @@ class QilingDebugger:
         self._breakpoints: dict = {}
         self.breakpoints_enabled: bool = True
         self._running: bool = False
-
+        # hook to interrupts before starting execution
+        # self._ql.clear_hooks()
+        self._ql.hook_intr(self._inter_read)  # used to set interrupt number
         self._orignal_state = self.qiling_instance.save()
 
     def start(self, binary_file: str) -> None:
@@ -112,9 +114,7 @@ class QilingDebugger:
             raise ValueError("Binary file path is not provided.")
 
         self._interrupt = None
-        # hook to interrupts before starting execution
-        # self._ql.clear_hooks()
-        self._ql.hook_intr(self._inter_read)  # used to set interrupt number
+
         self._running = True
         self._run()
 
@@ -227,7 +227,6 @@ class QilingDebugger:
         """
         Restarts the debugger.
         """
-        # FIXME: _inter_read is called as many times as restart is called
         self.stop()
         self._ql.restore(self._orignal_state)
 
