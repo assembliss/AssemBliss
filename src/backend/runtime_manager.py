@@ -18,8 +18,10 @@ execution of ARMv8 assembly code.
 The RuntimeManager class provides methods for assembling, linking, running,
 and debugging ARMv8 assembly code.
 """
+import shutil
 import subprocess  # nosec
 import os
+import shlex
 from qiling import Qiling
 from qiling.const import QL_VERBOSE
 from qiling_debugger import QilingDebugger
@@ -30,11 +32,12 @@ class RuntimeManager:
     Manages the runtime execution of ARMv8 assembly code.
     """
 
-    def __init__(self, assembly_file: str):
+    def __init__(self, assembly_file: str, file_system: str = 'arm64_linux'):
         self.assembly_file = assembly_file
         self.obj_file = None
         self.executable = None
-        self.rootfs_loc = r"./rootfs/arm64_linux"
+        # self.rootfs_loc = r"./rootfs/arm64_linux"
+        self.rootfs_loc = os.path.join('.', 'rootfs', file_system)
         self.debugger = None
 
     def assemble(self) -> str:
@@ -44,11 +47,32 @@ class RuntimeManager:
 
         .s file -> .o file
         """
-        executable_path = '/usr/bin/aarch64-linux-gnu-as'
-        # Replace file extension with .o. Can be any extension.
-        self.obj_file = os.path.splitext(self.assembly_file)[0] + '.o'
-        subprocess.run([executable_path, self.assembly_file,  # nosec
-                        '-g', '-o', self.obj_file], check=True)
+        # command_path = '/usr/bin/aarch64-linux-gnu-as'
+        command_path = self.get_command_path('assemble')
+        safe_assembly_file = shlex.quote(self.assembly_file)
+
+        # Replace file extension with .o. If windows use .obj
+        if os.uname().sysname == 'Windows':
+            extension = '.obj'
+        else:
+            extension = '.o'
+        self.obj_file = os.path.splitext(self.assembly_file)[0] + extension
+        # Construct the command as a list of arguments
+        command = [command_path, safe_assembly_file,
+                   '-g', '-o', self.obj_file]
+
+        try:
+            result = subprocess.run(  # nosec
+                command, check=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            if result.returncode != 0:
+                raise subprocess.CalledProcessError(
+                    result.returncode, result.args,
+                    output=result.stdout, stderr=result
+                )
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError("Subprocess execution failed.") from e
         return self.obj_file
 
     def link(self) -> str:
@@ -58,16 +82,32 @@ class RuntimeManager:
 
         .o file -> executable
         """
-        executable_path = '/usr/bin/aarch64-linux-gnu-ld'
+        # executable_path = '/usr/bin/aarch64-linux-gnu-ld'
+        command_path = self.get_command_path(
+            'link')
 
         if self.obj_file is None:
             assembled = self.check_dir(self.assembly_file)[0]
             if not assembled:
                 self.assemble()
 
+        safe_obj_file = shlex.quote(self.obj_file)
         self.executable = os.path.splitext(self.assembly_file)[0]
-        subprocess.run([executable_path, self.obj_file,  # nosec
-                        '-o', self.executable], check=True)
+        command = [command_path, safe_obj_file, '-o', self.executable]
+
+        try:
+            result = subprocess.run(  # nosec
+                command, check=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            if result.returncode != 0:
+                raise subprocess.CalledProcessError(
+                    result.returncode, result.args,
+                    output=result.stdout, stderr=result
+                )
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError("Subprocess execution failed.") from e
+
         return self.executable
 
     def run(self, verbosity: str = 'default'):
@@ -134,11 +174,14 @@ class RuntimeManager:
         Disassembles the executable file.
         Returns the disassembled code as a string.
         """
-        executable_path = '/usr/bin/aarch64-linux-gnu-objdump'
+        # command_path = '/usr/bin/aarch64-linux-gnu-objdump'
+        command_path = self.get_command_path(
+            'objdump'
+        )
 
-        self.verify_executable()
+        self.verify_executable()  # Ensure the executable file exists
 
-        disassembly = subprocess.run([executable_path,  # nosec
+        disassembly = subprocess.run([command_path,  # nosec
                                       '-d', '-l', self.executable],
                                      check=True, capture_output=True)
         return disassembly.stdout.decode()
@@ -187,6 +230,57 @@ class RuntimeManager:
         exe_exists = os.path.isfile(exe_file) and os.access(exe_file, os.X_OK)
 
         return obj_exists, exe_exists
+
+    @staticmethod
+    def get_command_path(mode: str) -> str:
+        """
+        Get the path of the specified GNU ARM toolchain command based on
+        the current operating system and mode.
+
+        Args:
+            mode (str): The mode indicating the type of command. Should be
+            one of 'assemble', 'link', or 'objdump'.
+
+        Returns:
+            str: The path to the command.
+
+        Raises:
+            ValueError: If the mode is unknown or the command is not found
+            in the system's PATH.
+        """
+        # get os name
+        os_name = os.uname().sysname
+
+        if mode == 'assemble':
+            if os_name == 'Linux' or os_name == 'Darwin':
+                command = 'aarch64-linux-gnu-as'
+            # windows
+            elif os_name == 'Windows':
+                command = 'aarch64-none-linux-gnu-as'
+        elif mode == 'link':
+            if os_name == 'Linux' or os_name == 'Darwin':
+                command = 'aarch64-linux-gnu-ld'
+            elif os_name == 'Windows':
+                command = 'aarch64-none-linux-gnu-ld'
+        elif mode == 'objdump':
+            if os_name == 'Linux' or os_name == 'Darwin':
+                command = 'aarch64-linux-gnu-objdump'
+            elif os_name == 'Windows':
+                command = 'aarch64-none-linux-gnu-objdump'
+        else:
+            raise ValueError(f"Unknown mode: {mode}")
+
+        # check if the command is in the path
+        path = shutil.which(command)
+        if path is None:
+            link = "https://developer.arm.com/downloads/-/\
+            arm-gnu-toolchain-downloads"
+            raise ValueError(
+                f"'{command}' command not found.\n"
+                "Please download and install the GNU ARM toolchain from:\n"
+                f"{link}"
+            )
+        return path
 
 
 def main():
